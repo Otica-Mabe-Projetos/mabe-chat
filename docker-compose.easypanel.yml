@@ -11,6 +11,13 @@
 #   profiles no original) foram removidos deste arquivo pra manter o
 #   primeiro deploy simples — dá pra somar depois copiando do
 #   docker-compose.prod.yml original quando for a hora.
+# - Versão FIXADA por digest (1.63.3, 29/09/2026) e pull_policy missing. Nunca
+#   `:stable` + always: um Implantar qualquer puxaria a release nova por cima de
+#   um banco que ainda não recebeu o baseline dela. Para atualizar: backup →
+#   baseline.sql da versão nova → trocar os 3 digests aqui → Implantar.
+# - Segredos: o .env é gerado no servidor (600) e NÃO vem da aba Ambiente.
+#   No EasyPanel, "Criar arquivo .env" fica DESLIGADO; ligado, todo Implantar
+#   sobrescreve o .env com o template. Ver docs/PLANO-MABE-CHAT-2026-09-29.md.
 
 x-logging: &default-logging
   driver: json-file
@@ -21,10 +28,28 @@ x-logging: &default-logging
 services:
   app:
     mem_limit: 768m
-    image: ${APP_IMAGE:-ghcr.io/melgarafael/deskcommcrm:stable}
-    pull_policy: ${APP_PULL_POLICY:-always}
+    image: ${APP_IMAGE:-ghcr.io/melgarafael/deskcommcrm:1.63.3@sha256:2d9d436d030120329121584834f98f8f74b14981716a2eff01e8a947c92810ac}
+    pull_policy: ${APP_PULL_POLICY:-missing}
     restart: unless-stopped
     env_file: .env
+    environment:
+      # Só o kit de instalação usa; o app nunca deve recebê-la (igual ao compose oficial).
+      SUPABASE_DB_ADMIN_URL: ""
+    labels:
+      # Webhook GLOBAL do WAHA fora da internet (equivale ao `respond 403` do
+      # Caddyfile oficial). O WAHA fala com o app pela rede interna (app:3000).
+      # ipallowlist só com TEST-NET-1 (RFC 5737) = 403 pra todo mundo; prioridade
+      # alta vence a rota do domínio que o EasyPanel gera no provider de arquivo.
+      traefik.enable: "true"
+      traefik.docker.network: easypanel
+      traefik.http.routers.mabechat-waha-block.rule: "Host(`infraestrutua-mabe-chat-app.z07ybu.easypanel.host`) && Path(`/api/v1/webhooks/waha`)"
+      traefik.http.routers.mabechat-waha-block.entrypoints: https
+      traefik.http.routers.mabechat-waha-block.tls.certresolver: letsencrypt
+      traefik.http.routers.mabechat-waha-block.priority: "1000"
+      traefik.http.routers.mabechat-waha-block.service: mabechat-app
+      traefik.http.routers.mabechat-waha-block.middlewares: mabechat-deny
+      traefik.http.middlewares.mabechat-deny.ipallowlist.sourcerange: "192.0.2.1/32"
+      traefik.http.services.mabechat-app.loadbalancer.server.port: "3000"
     depends_on:
       srh:
         condition: service_started
@@ -41,12 +66,13 @@ services:
 
   worker:
     mem_limit: 512m
-    image: ${WORKER_IMAGE:-ghcr.io/melgarafael/deskcomm-worker:stable}
-    pull_policy: ${WORKER_PULL_POLICY:-always}
+    image: ${WORKER_IMAGE:-ghcr.io/melgarafael/deskcomm-worker:1.63.3@sha256:20c243407d1cd1193ce5948271a1b32c53293deeb48611154b36c6c1371154e3}
+    pull_policy: ${WORKER_PULL_POLICY:-missing}
     restart: unless-stopped
     env_file: .env
     environment:
       WAHA_API_BASE_URL: http://waha:3000
+      SUPABASE_DB_ADMIN_URL: ""
     networks: [internal, supabase]
     healthcheck:
       test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://127.0.0.1:8787/healthz"]
@@ -99,14 +125,15 @@ services:
     networks: [internal]
 
   scheduler:
-    image: ${SCHEDULER_IMAGE:-ghcr.io/melgarafael/deskcomm-scheduler:stable}
-    pull_policy: ${SCHEDULER_PULL_POLICY:-always}
+    image: ${SCHEDULER_IMAGE:-ghcr.io/melgarafael/deskcomm-scheduler:1.63.3@sha256:c5917f9c3220dd126750701dcfbf2ccfe765b4a6b78dd33eb10c0d2edfffb482}
+    pull_policy: ${SCHEDULER_PULL_POLICY:-missing}
     restart: unless-stopped
     depends_on:
       app:
         condition: service_healthy
     environment:
-      TZ: America/Belem
+      # UTC como no compose oficial: os horários dos crons da imagem assumem UTC.
+      TZ: UTC
       INTERNAL_SECRET: ${INTERNAL_SECRET}
     logging: *default-logging
     networks: [internal]

@@ -40,8 +40,10 @@ RETER="${ATUALIZADOR_RETER:-14}"
 HORA_BACKUP="${ATUALIZADOR_HORA_BACKUP:-3}"
 INTERVALO="${ATUALIZADOR_INTERVALO_S:-300}"
 SECRET="${INTERNAL_CRON_SECRET:-${INTERNAL_SECRET:-}}"
-# "nome local=repositório no ghcr"
-IMAGENS="app=ghcr.io/melgarafael/deskcommcrm worker=ghcr.io/melgarafael/deskcomm-worker scheduler=ghcr.io/melgarafael/deskcomm-scheduler"
+# "nome local=repositório no ghcr". O app é o NOSSO (oficial + branch personalizacoes,
+# montado por .github/workflows/mabe-imagem.yml), então uma versão só é anunciada
+# depois que ela foi montada com as personalizações. Worker e scheduler são oficiais.
+IMAGENS="${ATUALIZADOR_IMAGENS:-app=ghcr.io/otica-mabe-projetos/mabe-chat-app worker=ghcr.io/melgarafael/deskcomm-worker scheduler=ghcr.io/melgarafael/deskcomm-scheduler}"
 # Mesmas listas de hostgator-setup-kit/_common.sh (BASELINE_ERROS_*).
 BENIGNOS='already exists|multiple primary keys|multiple default values|is already a member|already a partition'
 DISPUTA='deadlock detected|could not serialize access|lock timeout|could not obtain lock|terminating connection|server closed the connection|connection to server was lost|remaining connection slots|too many clients|the database system is (starting up|shutting down|in recovery mode|not yet accepting connections)|Connection refused|Connection timed out'

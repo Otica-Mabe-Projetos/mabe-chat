@@ -21,7 +21,9 @@ A página de atualização só aparece para **administrador da plataforma**
 
 1. A cada 5 minutos o agente anuncia ao app a versão instalada e a última release
    estável do DeskcommCRM (GitHub). Ele só anuncia quando as 3 imagens já foram
-   publicadas no ghcr. O painel mostra "Atualizar agora" e o changelog.
+   publicadas no ghcr: a **nossa** do app, montada com as personalizações (ver
+   [PERSONALIZACOES-MABE-CHAT.md](PERSONALIZACOES-MABE-CHAT.md)), e as oficiais do worker
+   e do scheduler. O painel mostra "Atualizar agora" e o changelog.
 2. Você clica. Em até 5 minutos o agente pega o pedido e executa:
    1. **backup:** `pg_dump` do banco, conferido lendo o dump de volta, mais o
       Storage (anexos/mídias) e as sessões do WhatsApp. Sem backup legível, para aqui.
@@ -104,10 +106,15 @@ Restaurar a produção de verdade (substituir o banco) é uma operação assisti
 
 O compose espera as tags locais. Num Docker novo, crie-as a partir da versão desejada:
 
+O app vem da **nossa** imagem (oficial + personalizações, ver
+[PERSONALIZACOES-MABE-CHAT.md](PERSONALIZACOES-MABE-CHAT.md)). Worker e scheduler vêm das
+oficiais.
+
 ```bash
-for n in app:deskcommcrm worker:deskcomm-worker scheduler:deskcomm-scheduler; do
-  docker pull ghcr.io/melgarafael/${n#*:}:1.63.3
-  docker tag ghcr.io/melgarafael/${n#*:}:1.63.3 mabe-chat/${n%%:*}:atual
+V=1.64.0
+docker pull ghcr.io/otica-mabe-projetos/mabe-chat-app:$V && docker tag ghcr.io/otica-mabe-projetos/mabe-chat-app:$V mabe-chat/app:atual
+for n in worker scheduler; do
+  docker pull ghcr.io/melgarafael/deskcomm-$n:$V && docker tag ghcr.io/melgarafael/deskcomm-$n:$V mabe-chat/$n:atual
 done
 ```
 

@@ -1,11 +1,21 @@
 # Mabe Chat — atualização e backup (EasyPanel)
 
-O botão nativo **Configurações › Atualização › "Atualizar agora"** funciona nesta
-instalação pelo serviço `atualizador` (`infra/atualizador-easypanel/`). O serviço faz
+O botão nativo **"Atualizar agora"** funciona nesta instalação pelo serviço
+`atualizador` (`infra/atualizador-easypanel/`). Ele não aparece no menu de
+Configurações. O caminho até ele é o link **"Nova versão · X"** no rodapé da barra
+lateral, que só aparece quando há versão nova, ou o endereço direto
+`/app/settings/atualizacao`. O serviço faz
 o papel do `hostgator-setup-kit/agent.sh` + `update.sh` oficiais, que não servem no
 EasyPanel, e fala o mesmo protocolo com o app (`POST /api/v1/system/agent`).
 
-A página de atualização só aparece para **administrador da plataforma**.
+A página de atualização só aparece para **administrador da plataforma**
+(`public.platform_admins`). Para quem não é admin, o endereço dá 404.
+
+- **Admin atual:** a conta do Paulo, promovida em 29/09/2026 com o mesmo INSERT do
+  `install.sh` oficial.
+- **Cadastro:** desde 29/09/2026 está em **só por convite** (`platform_settings.signup_mode`),
+  e muda em Admin › Cadastro. Não usamos `DISABLE_SIGNUP` do GoTrue, porque o
+  `/signup?invite=…` dos convites precisa continuar funcionando.
 
 ## Como uma atualização acontece
 

@@ -11,13 +11,14 @@
 #   profiles no original) foram removidos deste arquivo pra manter o
 #   primeiro deploy simples — dá pra somar depois copiando do
 #   docker-compose.prod.yml original quando for a hora.
-# - Versão FIXADA por digest (1.63.3, 29/09/2026) e pull_policy missing. Nunca
-#   `:stable` + always: um Implantar qualquer puxaria a release nova por cima de
-#   um banco que ainda não recebeu o baseline dela. Para atualizar: backup →
-#   baseline.sql da versão nova → trocar os 3 digests aqui → Implantar.
-# - Segredos: o .env é gerado no servidor (600) e NÃO vem da aba Ambiente.
-#   No EasyPanel, "Criar arquivo .env" fica DESLIGADO; ligado, todo Implantar
-#   sobrescreve o .env com o template. Ver docs/PLANO-MABE-CHAT-2026-09-29.md.
+# - Versão: app/worker/scheduler usam a tag LOCAL mabe-chat/*:atual
+#   (pull_policy: never). Quem move a tag é o serviço `atualizador` abaixo —
+#   acionado pelo botão "Configurações › Atualização › Atualizar agora" do
+#   próprio Mabe Chat —, com backup completo antes e volta automática pra
+#   :anterior se a versão nova não subir saudável. Um Implantar do EasyPanel
+#   NUNCA troca a versão. Servidor novo: recriar as tags (docs/ATUALIZACAO-MABE-CHAT.md).
+# - Segredos: fonte da verdade = aba Ambiente do EasyPanel ("Criar arquivo
+#   .env" LIGADO). Todo Implantar regrava o code/.env a partir dela.
 
 x-logging: &default-logging
   driver: json-file
@@ -28,8 +29,8 @@ x-logging: &default-logging
 services:
   app:
     mem_limit: 768m
-    image: ${APP_IMAGE:-ghcr.io/melgarafael/deskcommcrm:1.63.3@sha256:2d9d436d030120329121584834f98f8f74b14981716a2eff01e8a947c92810ac}
-    pull_policy: ${APP_PULL_POLICY:-missing}
+    image: mabe-chat/app:atual
+    pull_policy: never
     restart: unless-stopped
     env_file: .env
     environment:
@@ -66,8 +67,8 @@ services:
 
   worker:
     mem_limit: 512m
-    image: ${WORKER_IMAGE:-ghcr.io/melgarafael/deskcomm-worker:1.63.3@sha256:20c243407d1cd1193ce5948271a1b32c53293deeb48611154b36c6c1371154e3}
-    pull_policy: ${WORKER_PULL_POLICY:-missing}
+    image: mabe-chat/worker:atual
+    pull_policy: never
     restart: unless-stopped
     env_file: .env
     environment:
@@ -125,8 +126,8 @@ services:
     networks: [internal]
 
   scheduler:
-    image: ${SCHEDULER_IMAGE:-ghcr.io/melgarafael/deskcomm-scheduler:1.63.3@sha256:c5917f9c3220dd126750701dcfbf2ccfe765b4a6b78dd33eb10c0d2edfffb482}
-    pull_policy: ${SCHEDULER_PULL_POLICY:-missing}
+    image: mabe-chat/scheduler:atual
+    pull_policy: never
     restart: unless-stopped
     depends_on:
       app:
@@ -138,9 +139,31 @@ services:
     logging: *default-logging
     networks: [internal]
 
+  # Agente de atualização + backup diário (infra/atualizador-easypanel/). Usa
+  # o socket do Docker pra parar/subir os contêineres e rodar pg_dump/psql no
+  # supabase-db — o mesmo poder do agent.sh oficial, que roda como root no host.
+  # Não publica porta nenhuma. Backups no volume `backups`.
+  atualizador:
+    build: ./infra/atualizador-easypanel
+    image: mabe-chat/atualizador:local
+    restart: unless-stopped
+    mem_limit: 256m
+    env_file: .env
+    environment:
+      TZ: America/Manaus
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /etc/easypanel/projects/infraestrutua/mabe-chat-app/code:/etc/easypanel/projects/infraestrutua/mabe-chat-app/code:ro
+      - /etc/easypanel/projects/infraestrutua/mabe-chat-supabase/code/volumes/storage:/fontes/storage:ro
+      - waha-data:/fontes/waha-data:ro
+      - backups:/backups
+    logging: *default-logging
+    networks: [internal]
+
 volumes:
   waha-data:
   waha-media:
+  backups:
 
 networks:
   internal:

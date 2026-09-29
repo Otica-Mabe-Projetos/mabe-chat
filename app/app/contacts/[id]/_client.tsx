@@ -40,6 +40,7 @@ import { rotuloDoContato } from "@/lib/contacts/rotulo-do-contato";
 import { origemDoContato } from "@/lib/leads/origem-do-contato";
 import { phoneForDisplay } from "@/lib/channels/phone-variants";
 import { DialButton } from "@/components/voice/DialButton";
+import { IniciarConversaNoDossie } from "@/components/inbox/NovaConversa";
 
 interface Props {
   contactId: string;
@@ -223,6 +224,10 @@ export function ContactDetailClient({ contactId }: Props) {
       </header>
 
       <ConversaNoDossie conversa={contact.conversa} />
+      {/* Personalização Ótica Mabe: contato sem conversa ganha "Iniciar conversa". */}
+      {!contact.conversa && contact.phone_number ? (
+        <IniciarConversaNoDossie contactId={contactId} />
+      ) : null}
 
       {/* ANTES das abas, e não dentro de uma delas: é o único conteúdo desta
           tela que PEDE uma ação. Enterrado numa aba, viraria pendência que só

@@ -126,3 +126,4 @@ docker exec infraestrutua_mabe-chat-app-atualizador-1 bash /usr/local/bin/atuali
 | Atualização de ponta a ponta 1.63.3 → 1.63.3 | backup ok (2,7 MB, 4.412 objetos), baseline aplicado na 1ª passada, 158/158 regras, healthy em 40 s |
 | Volta automática (falha de saúde simulada) | voltou para a anterior e ficou healthy |
 | Protocolo com o app | heartbeat gravado (v1.63.3 → v1.63.5 disponível, changelog 7 KB); progresso e resultado aceitos pelo schema; sem segredo = 401 |
+| **1ª atualização real pelo botão** (Paulo, 29/09 16:36 Belém) | 1.63.3 → 1.63.6 `success` em ~5 min de ponta a ponta, backup `20260929-153949-antes-de-v1.63.6`, dados intactos, tudo healthy |

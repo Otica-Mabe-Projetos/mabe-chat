@@ -19,6 +19,7 @@ import { OwnerBadge } from "./OwnerBadge";
 import { resolveLeadOwner } from "@/lib/kanban/owner";
 import { formatValorDoNegocio, MOEDA_PADRAO } from "@/lib/money";
 import type { CustomFieldDef } from "@/components/contacts/CustomFieldsEditor";
+import { IniciarConversaNoDossie } from "@/components/inbox/NovaConversa";
 
 interface Props {
   open: boolean;
@@ -136,6 +137,10 @@ export function LeadDossier({
         )}
 
         <ConversaNoDossie conversa={lead.conversa} />
+        {/* Personalização Ótica Mabe: negócio sem conversa ganha "Iniciar conversa". */}
+        {!lead.conversa && lead.contact_id && lead.contact_phone ? (
+          <IniciarConversaNoDossie contactId={lead.contact_id} />
+        ) : null}
 
         {/* Os dados do CLIENTE: telefone e e-mail numa aba, links (Instagram,
             site, Google Meu Negócio…) na outra. Vêm do contato, não do lead. */}

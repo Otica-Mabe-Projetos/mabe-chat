@@ -15,10 +15,12 @@ A página de atualização só aparece para **administrador da plataforma**
   `install.sh` oficial.
 - **Cadastro:** desde 29/09/2026 está em **só por convite** (`platform_settings.signup_mode`),
   e muda em Admin › Cadastro.
-- **Pendente:** ligar também `DISABLE_SIGNUP=true` no Supabase (`mabe-chat-supabase`).
-  Isso fecha o cadastro direto no GoTrue com a anon key. É seguro: desde a issue #1653
-  (`lib/auth/convite-no-gotrue.ts`), o app cria a conta de quem foi convidado pela admin
-  API quando o GoTrue está fechado. O "Cadastrar membro" também usa a admin API.
+- **GoTrue fechado:** desde 29/09/2026, `DISABLE_SIGNUP=true` no Supabase (`mabe-chat-supabase`).
+  Isso fecha o cadastro direto com a anon key. Convites seguem funcionando: desde a issue
+  #1653 (`lib/auth/convite-no-gotrue.ts`), o app cria a conta de quem foi convidado pela
+  admin API. O "Cadastrar membro" também usa a admin API.
+- **`INTERNAL_SECRET` trocado** em 29/09/2026 (gerado no servidor, aba Ambiente). Conferido:
+  o scheduler chama o app com a chave nova (200); com uma chave errada, 401.
 
 ## Como uma atualização acontece
 
@@ -137,3 +139,4 @@ docker exec infraestrutua_mabe-chat-app-atualizador-1 bash /usr/local/bin/atuali
 | Volta automática (falha de saúde simulada) | voltou para a anterior e ficou healthy |
 | Protocolo com o app | heartbeat gravado (v1.63.3 → v1.63.5 disponível, changelog 7 KB); progresso e resultado aceitos pelo schema; sem segredo = 401 |
 | **1ª atualização real pelo botão** (Paulo, 29/09 16:36 Belém) | 1.63.3 → 1.63.6 `success` em ~5 min de ponta a ponta, backup `20260929-153949-antes-de-v1.63.6`, dados intactos, tudo healthy |
+| Troca para a **nossa** imagem (pela linha de comando, 29/09 19:12 Belém) | 1.64.0 oficial → 1.64.0 nossa, com pacote privado lido pelo `GHCR_TOKEN`. Backup `20260929-181224-antes-de-v1.64.0` (3,5 MB, 4.414 objetos), baseline na 1ª passada, 158/158 regras, healthy em 55 s. Rotas novas respondem 401 sem login |

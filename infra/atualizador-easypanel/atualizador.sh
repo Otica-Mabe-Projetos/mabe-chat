@@ -44,6 +44,10 @@ SECRET="${INTERNAL_CRON_SECRET:-${INTERNAL_SECRET:-}}"
 # montado por .github/workflows/mabe-imagem.yml), então uma versão só é anunciada
 # depois que ela foi montada com as personalizações. Worker e scheduler são oficiais.
 IMAGENS="${ATUALIZADOR_IMAGENS:-app=ghcr.io/otica-mabe-projetos/mabe-chat-app worker=ghcr.io/melgarafael/deskcomm-worker scheduler=ghcr.io/melgarafael/deskcomm-scheduler}"
+# O nosso app é pacote PRIVADO no GHCR: o servidor lê com um token do GitHub só de
+# leitura (classic, escopo read:packages), guardado na aba Ambiente. Os oficiais são públicos.
+GHCR_USUARIO="${GHCR_USUARIO:-}"
+GHCR_TOKEN="${GHCR_TOKEN:-}"
 # Mesmas listas de hostgator-setup-kit/_common.sh (BASELINE_ERROS_*).
 BENIGNOS='already exists|multiple primary keys|multiple default values|is already a member|already a partition'
 DISPUTA='deadlock detected|could not serialize access|lock timeout|could not obtain lock|terminating connection|server closed the connection|connection to server was lost|remaining connection slots|too many clients|the database system is (starting up|shutting down|in recovery mode|not yet accepting connections)|Connection refused|Connection timed out'
@@ -95,9 +99,19 @@ ultima_release() {  # última release estável do GitHub, com cache de 30 min (s
   echo "$tag"
 }
 
+ghcr_token() {  # ghcr_token <repositório ghcr sem o host> — token de leitura do registro
+  local url="https://ghcr.io/token?scope=repository:$1:pull"
+  if [ -n "$GHCR_TOKEN" ]; then
+    # A credencial entra por stdin (-K -), nunca na linha de comando.
+    printf 'user = "%s:%s"\n' "$GHCR_USUARIO" "$GHCR_TOKEN" | curl -fsS --max-time 20 -K - "$url"
+  else
+    curl -fsS --max-time 20 "$url"
+  fi | jq -r '.token // empty'
+}
+
 imagem_existe() {  # imagem_existe <repositório ghcr sem o host> <tag>
   local token
-  token="$(curl -fsS --max-time 20 "https://ghcr.io/token?scope=repository:$1:pull" | jq -r '.token // empty')" || return 1
+  token="$(ghcr_token "$1")" || return 1
   [ -n "$token" ] || return 1
   curl -fsSI --max-time 20 -H "Authorization: Bearer $token" \
     -H 'Accept: application/vnd.oci.image.index.v1+json,application/vnd.docker.distribution.manifest.list.v2+json,application/vnd.docker.distribution.manifest.v2+json' \
@@ -286,11 +300,17 @@ conferir_regras() {  # conferir_regras <baseline> — porta da conferência do u
 # --------------------------------------------------------------- imagens ---
 
 puxar_imagens() {  # baixa as 3 imagens ANTES de parar qualquer coisa
-  local par ver="${1#v}"
+  local par ver="${1#v}" falhou=0
+  if [ -n "$GHCR_TOKEN" ]; then
+    printf '%s' "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USUARIO" --password-stdin >/dev/null 2>&1 \
+      || { log "código: o GitHub recusou o token de leitura (GHCR_TOKEN)"; return 1; }
+  fi
   for par in $IMAGENS; do
     log "código: baixando ${par#*=}:$ver"
-    docker pull -q "${par#*=}:$ver" >/dev/null || return 1
+    docker pull -q "${par#*=}:$ver" >/dev/null || { falhou=1; break; }
   done
+  [ -z "$GHCR_TOKEN" ] || docker logout ghcr.io >/dev/null 2>&1
+  return "$falhou"
 }
 
 trocar_para() {  # a instalada vira :anterior, a nova vira :atual

@@ -14,8 +14,11 @@ A página de atualização só aparece para **administrador da plataforma**
 - **Admin atual:** a conta do Paulo, promovida em 29/09/2026 com o mesmo INSERT do
   `install.sh` oficial.
 - **Cadastro:** desde 29/09/2026 está em **só por convite** (`platform_settings.signup_mode`),
-  e muda em Admin › Cadastro. Não usamos `DISABLE_SIGNUP` do GoTrue, porque o
-  `/signup?invite=…` dos convites precisa continuar funcionando.
+  e muda em Admin › Cadastro.
+- **Pendente:** ligar também `DISABLE_SIGNUP=true` no Supabase (`mabe-chat-supabase`).
+  Isso fecha o cadastro direto no GoTrue com a anon key. É seguro: desde a issue #1653
+  (`lib/auth/convite-no-gotrue.ts`), o app cria a conta de quem foi convidado pela admin
+  API quando o GoTrue está fechado. O "Cadastrar membro" também usa a admin API.
 
 ## Como uma atualização acontece
 

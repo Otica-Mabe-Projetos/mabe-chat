@@ -80,8 +80,13 @@ espanhol. É esperado: o teste não roda na montagem, e a tela usa o português.
 
 ## Pontos de atenção
 
-- O pacote `mabe-chat-app` no GitHub precisa ser **público**. O servidor baixa a imagem
-  sem senha, e a imagem não contém segredo nenhum.
+- O pacote `mabe-chat-app` no GitHub é **privado**, por decisão do Paulo.
+  - O servidor baixa com um token do GitHub **só de leitura** (classic, escopo
+    `read:packages`), guardado na aba Ambiente do `mabe-chat-app` como `GHCR_USUARIO` e
+    `GHCR_TOKEN`.
+  - Se o token vencer ou for revogado, o atualizador para de anunciar versões novas. O
+    log diz que a release está "sem as 3 imagens". É só gerar outro e trocar na aba Ambiente.
+  - O **código** do fork continua público: o GitHub não deixa um fork virar privado.
 - O GitHub desliga o agendamento de um repositório público depois de **60 dias sem
   commit**. Se as versões novas pararem de aparecer, reative o workflow em Actions ou
   rode-o à mão.

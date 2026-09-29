@@ -1,0 +1,162 @@
+# Mabe Chat — imagem do app = release oficial do DeskcommCRM + a branch `personalizacoes`.
+#
+# Publica ghcr.io/otica-mabe-projetos/mabe-chat-app:<versão>. O atualizador da VPS
+# (infra/atualizador-easypanel) só anuncia uma versão nova quando esta imagem existe,
+# então uma personalização que não encaixa numa release nova segura aquela versão (o
+# servidor fica na anterior) em vez de quebrar. Worker e scheduler seguem as imagens
+# oficiais. Ver docs/PERSONALIZACOES-MABE-CHAT.md.
+name: Mabe — imagem do app
+
+on:
+  schedule:
+    - cron: "17,47 * * * *"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag oficial (ex.: v1.64.0). Vazio = última release."
+        required: false
+      forcar:
+        description: "Montar de novo mesmo que a imagem já exista"
+        type: boolean
+        default: false
+
+concurrency:
+  group: mabe-imagem
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  packages: write
+
+env:
+  IMAGEM: ghcr.io/otica-mabe-projetos/mabe-chat-app
+  UPSTREAM: https://github.com/melgarafael/DeskcommCRM.git
+
+jobs:
+  montar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    steps:
+      - name: Qual versão
+        id: alvo
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG_PEDIDA: ${{ inputs.tag }}
+        run: |
+          set -euo pipefail
+          tag="${TAG_PEDIDA:-}"
+          [ -n "$tag" ] || tag=$(gh api repos/melgarafael/DeskcommCRM/releases/latest --jq .tag_name)
+          [[ "$tag" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "::error::tag inválida: $tag"; exit 1; }
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          echo "versao=${tag#v}" >> "$GITHUB_OUTPUT"
+
+      - uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: A imagem já existe?
+        id: existe
+        env:
+          FORCAR: ${{ inputs.forcar }}
+        run: |
+          if [ "$FORCAR" != "true" ] && docker manifest inspect "$IMAGEM:${{ steps.alvo.outputs.versao }}" >/dev/null 2>&1; then
+            echo "sim=1" >> "$GITHUB_OUTPUT"
+            echo "$IMAGEM:${{ steps.alvo.outputs.versao }} já existe — nada a fazer"
+          fi
+
+      - uses: actions/checkout@v7
+        if: steps.existe.outputs.sim != '1'
+        with:
+          ref: personalizacoes
+          fetch-depth: 0
+          path: src
+
+      - name: Oficial + personalizações
+        id: codigo
+        if: steps.existe.outputs.sim != '1'
+        working-directory: src
+        env:
+          TAG: ${{ steps.alvo.outputs.tag }}
+        run: |
+          set -euo pipefail
+          git config user.name "mabe-imagem"
+          git config user.email "mabe-imagem@users.noreply.github.com"
+          nossos=$(git rev-parse HEAD)
+          git fetch --quiet --tags "$UPSTREAM"
+          # A branch é "uma tag oficial + os nossos commits"; a base é a tag mais
+          # próxima dela. Montar uma versão ANTERIOR a essa base levaria junto o
+          # código oficial do meio, com o número da versão velha.
+          base=$(git describe --tags --abbrev=0 --match 'v[0-9]*' "$nossos")
+          git merge-base --is-ancestor "$base" "$TAG" \
+            || { echo "::error::as personalizações são sobre ${base}; ${TAG} é anterior"; exit 1; }
+          echo "personalizações ($(git rev-list --count "$base..$nossos") commit(s), feitas sobre ${base}) aplicadas em ${TAG}:"
+          git log --oneline "$base..$nossos"
+          git checkout --quiet -b montagem "$TAG"
+          if ! git cherry-pick "$base..$nossos"; then
+            echo "::error::As personalizações não encaixam em ${TAG}. Arquivos em conflito:"
+            git diff --name-only --diff-filter=U | sed 's/^/::error::  /'
+            exit 1
+          fi
+          echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+      - uses: docker/setup-buildx-action@v4
+        if: steps.existe.outputs.sim != '1'
+
+      - name: Montar (local, para o teste)
+        if: steps.existe.outputs.sim != '1'
+        uses: docker/build-push-action@v7
+        with:
+          context: src
+          file: src/Dockerfile
+          platforms: linux/amd64
+          load: true
+          tags: mabe-app:teste
+          build-args: |
+            APP_VERSION=${{ steps.alvo.outputs.versao }}
+          cache-from: type=gha,scope=mabe-app
+          cache-to: type=gha,mode=max,scope=mabe-app
+
+      - name: O container chega a servir?
+        if: steps.existe.outputs.sim != '1'
+        run: |
+          set -euo pipefail
+          docker run -d --name teste -p 3000:3000 \
+            -e NEXT_PUBLIC_SUPABASE_URL=https://exemplo.supabase.co \
+            -e NEXT_PUBLIC_SUPABASE_ANON_KEY=chave-de-mentira \
+            -e SUPABASE_SERVICE_ROLE_KEY=chave-de-mentira \
+            -e SUPABASE_DB_URL=postgres://u:p@127.0.0.1:5432/postgres \
+            -e SENTRY_DSN=off \
+            mabe-app:teste
+          for _ in $(seq 1 40); do
+            docker ps --filter name=teste --filter status=running -q | grep -q . \
+              || { echo "::error::o container morreu no boot"; docker logs teste 2>&1 | tail -40; exit 1; }
+            if docker logs teste 2>&1 | grep -qE "Ready in|started server on"; then
+              if docker logs teste 2>&1 | grep -q MODULE_NOT_FOUND; then
+                echo "::error::falta módulo no standalone"; docker logs teste 2>&1 | tail -40; exit 1
+              fi
+              echo "o app chegou a servir"; exit 0
+            fi
+            sleep 3
+          done
+          echo "::error::o app não chegou a servir em 120 s"; docker logs teste 2>&1 | tail -40; exit 1
+
+      - name: Publicar
+        if: steps.existe.outputs.sim != '1'
+        uses: docker/build-push-action@v7
+        with:
+          context: src
+          file: src/Dockerfile
+          platforms: linux/amd64
+          push: true
+          tags: ${{ env.IMAGEM }}:${{ steps.alvo.outputs.versao }}
+          labels: |
+            org.opencontainers.image.title=Mabe Chat
+            org.opencontainers.image.description=DeskcommCRM ${{ steps.alvo.outputs.tag }} + personalizações da Ótica Mabe
+            org.opencontainers.image.version=${{ steps.alvo.outputs.versao }}
+            org.opencontainers.image.revision=${{ steps.codigo.outputs.sha }}
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+          build-args: |
+            APP_VERSION=${{ steps.alvo.outputs.versao }}
+          cache-from: type=gha,scope=mabe-app

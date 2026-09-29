@@ -9,6 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { TeamMembersClient } from "./_components/TeamMembersClient";
 import { TeamInvitesClient } from "./_components/TeamInvitesClient";
 import { AttendantsClient } from "./_components/AttendantsClient";
+import { CadastrarMembroButton } from "@/components/team/CadastroDireto";
 import { fusoUtilizavel } from "@/lib/tempo/fusos";
 
 export const dynamic = "force-dynamic";
@@ -56,9 +57,13 @@ export default async function TeamPage({
           </p>
         </div>
         {isAdmin ? (
-          <Button asChild className="shrink-0">
-            <Link href="/app/team/invite">{t("Convidar membros")}</Link>
-          </Button>
+          <div className="flex shrink-0 flex-wrap gap-2">
+            {/* Personalização Ótica Mabe: cadastro direto com senha (components/team/CadastroDireto.tsx). */}
+            <CadastrarMembroButton />
+            <Button asChild className="shrink-0">
+              <Link href="/app/team/invite">{t("Convidar membros")}</Link>
+            </Button>
+          </div>
         ) : null}
       </header>
 

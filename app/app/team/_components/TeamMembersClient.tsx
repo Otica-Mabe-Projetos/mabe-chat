@@ -1,6 +1,7 @@
 "use client";
 
 import { MemberInterfaceDialog } from "@/components/team/MemberInterfaceDialog";
+import { TrocarSenhaDialog } from "@/components/team/CadastroDireto";
 import { useTagDeIdioma } from "@/hooks/i18n/useLocaleDeData";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -59,6 +60,7 @@ export function TeamMembersClient({ currentUserId, canManage }: Props) {
 
   const [interfaceMember, setInterfaceMember] = useState<TeamMember | null>(null);
   const [revokeDialog, setRevokeDialog] = useState<TeamMember | null>(null);
+  const [senhaMember, setSenhaMember] = useState<TeamMember | null>(null);
 
   if (isLoading) {
     return <p className="text-sm text-muted-foreground">{t("Carregando…")}</p>;
@@ -175,6 +177,12 @@ export function TeamMembersClient({ currentUserId, canManage }: Props) {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
+                          {/* Personalização Ótica Mabe: troca de senha pelo admin. */}
+                          {!m.revoked_at ? (
+                            <DropdownMenuItem onClick={() => setSenhaMember(m)}>
+                              {t("Trocar senha")}
+                            </DropdownMenuItem>
+                          ) : null}
                           {/*
                             Revogar e reativar são exclusivos: oferecer os dois
                             na mesma linha convidaria ao clique errado. Sem o
@@ -210,6 +218,13 @@ export function TeamMembersClient({ currentUserId, canManage }: Props) {
         </Table>
       </div>
 
+      {senhaMember && (
+        <TrocarSenhaDialog
+          key={senhaMember.user_id}
+          member={senhaMember}
+          onClose={() => setSenhaMember(null)}
+        />
+      )}
       {interfaceMember && (
         <MemberInterfaceDialog
           key={interfaceMember.user_id}

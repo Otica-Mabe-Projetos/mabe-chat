@@ -94,7 +94,9 @@ export async function POST(req: NextRequest): Promise<Response> {
     p_invited_by: authUser.id,
     p_issued_at: agora,
     p_invited_at: agora,
-    p_interface_settings: INTERFACE_COMPLETA,
+    // Atendente nasce com o menu enxuto (Inbox, Agenda, Funis, Contatos, Tarefas):
+    // é a interface que o produto já tem para quem só atende. Os outros papéis, completa.
+    p_interface_settings: input.role === "agent" ? { preset: "simplificada" } : INTERFACE_COMPLETA,
   });
   if (erroVinculo || !vinculo?.id) {
     await admin.auth.admin.deleteUser(novoId);

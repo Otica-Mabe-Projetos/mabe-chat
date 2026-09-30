@@ -1,0 +1,180 @@
+"use client";
+/**
+ * Coluna da lista da mesa do atendente — personalização da Ótica Mabe.
+ *
+ * As abas do VBot que a equipe já conhece (Novos / Meus / Outros), o filtro de não
+ * lidas, a busca e, fixo embaixo, "Conversar" pelo número. A lista em si é a
+ * oficial (`ConversationList`): mesma ordem da fila (quem espera há mais tempo
+ * primeiro), mesmo tempo real.
+ */
+import { useState, type FormEvent } from "react";
+import { toast } from "sonner";
+
+import { ConversationList } from "@/components/inbox/ConversationList";
+import { useAbrirConversa } from "@/components/inbox/NovaConversa";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { usePermission } from "@/hooks/auth/AuthProvider";
+import { useT } from "@/hooks/i18n/useT";
+import type { ConversationsFilters, useConversationsRealtime } from "@/hooks/inbox/useConversationsRealtime";
+import { MagnifyingGlass } from "@/lib/ui/icons";
+import { cn } from "@/lib/utils";
+import { AlternarModo } from "./AlternarModo";
+
+export type Aba = "novos" | "meus" | "outros";
+
+interface Props {
+  aba: Aba;
+  onAba: (aba: Aba) => void;
+  contagem: { novos: number | null; meus: number | null };
+  busca: string;
+  onBusca: (v: string) => void;
+  somenteNaoLidas: boolean;
+  onSomenteNaoLidas: (v: boolean) => void;
+  // A mesma forma que `ConversationList` recebe do Inbox oficial.
+  listQuery: ReturnType<typeof useConversationsRealtime>;
+  filters: ConversationsFilters;
+  selectedId: string | null;
+  onSelect: (id: string) => void;
+}
+
+export function ListaDeAtendimentos(props: Props) {
+  const t = useT();
+  const abas: Array<{ id: Aba; rotulo: string; n: number | null }> = [
+    { id: "novos", rotulo: t("Novos"), n: props.contagem.novos },
+    { id: "meus", rotulo: t("Meus"), n: props.contagem.meus },
+    { id: "outros", rotulo: t("Outros"), n: null },
+  ];
+
+  return (
+    <div className="flex h-full min-h-0 flex-col">
+      <div className="flex items-center gap-1 border-b border-border px-2 pt-2" role="tablist" aria-label={t("Atendimentos")}>
+        {abas.map((a) => {
+          const ativa = props.aba === a.id;
+          return (
+            <button
+              key={a.id}
+              type="button"
+              role="tab"
+              aria-selected={ativa}
+              onClick={() => props.onAba(a.id)}
+              className={cn(
+                "-mb-px flex min-h-10 items-center gap-1.5 border-b-2 px-3 text-sm transition-colors",
+                ativa
+                  ? "border-accent font-semibold text-text"
+                  : "border-transparent text-text-muted hover:text-text",
+              )}
+            >
+              {a.rotulo}
+              {a.n !== null && a.n > 0 && (
+                <span
+                  className={cn(
+                    "min-w-5 rounded-full px-1.5 text-center text-xs font-semibold tabular-nums",
+                    a.id === "novos" ? "bg-accent text-accent-foreground" : "bg-surface-elevated text-text-muted",
+                  )}
+                >
+                  {a.n > 999 ? "999+" : a.n}
+                </span>
+              )}
+            </button>
+          );
+        })}
+        <div className="ml-auto pb-1">
+          <AlternarModo para="completo" />
+        </div>
+      </div>
+
+      <div className="flex items-center gap-2 border-b border-border px-3 py-2">
+        <div className="flex shrink-0 rounded-md border border-border p-0.5" role="group" aria-label={t("Filtro")}>
+          {[
+            { v: false, rotulo: t("Todas") },
+            { v: true, rotulo: t("Não lidas") },
+          ].map((f) => (
+            <button
+              key={String(f.v)}
+              type="button"
+              aria-pressed={props.somenteNaoLidas === f.v}
+              onClick={() => props.onSomenteNaoLidas(f.v)}
+              className={cn(
+                "min-h-8 rounded-sm px-2.5 text-xs transition-colors",
+                props.somenteNaoLidas === f.v
+                  ? "bg-accent-soft font-medium text-text"
+                  : "text-text-muted hover:text-text",
+              )}
+            >
+              {f.rotulo}
+            </button>
+          ))}
+        </div>
+        <label className="flex min-w-0 flex-1 items-center gap-1.5 rounded-md border border-border px-2 focus-within:ring-2 focus-within:ring-accent">
+          <MagnifyingGlass size={14} className="shrink-0 text-text-muted" aria-hidden />
+          <input
+            type="search"
+            value={props.busca}
+            onChange={(e) => props.onBusca(e.target.value)}
+            placeholder={t("Buscar nome ou telefone")}
+            aria-label={t("Buscar nome ou telefone")}
+            className="min-h-8 w-full min-w-0 bg-transparent text-sm outline-hidden placeholder:text-text-muted"
+          />
+        </label>
+      </div>
+
+      <div className="min-h-0 flex-1 overflow-hidden">
+        <ConversationList
+          listQuery={props.listQuery}
+          filters={props.filters}
+          selectedId={props.selectedId}
+          onSelect={props.onSelect}
+          onLimparFiltros={() => {
+            props.onBusca("");
+            props.onSomenteNaoLidas(false);
+          }}
+        />
+      </div>
+
+      <ConversarPeloNumero />
+    </div>
+  );
+}
+
+/** O "+55 (00) 0000-0000 · Conversar" do VBot: abre a conversa já, sem diálogo. */
+function ConversarPeloNumero() {
+  const t = useT();
+  const podeResponder = usePermission("inbox.reply");
+  const { abrir, abrindo } = useAbrirConversa();
+  const [numero, setNumero] = useState("");
+  if (!podeResponder) return null;
+
+  const enviar = async (e: FormEvent) => {
+    e.preventDefault();
+    const digitos = numero.replace(/\D/g, "");
+    if (digitos.length < 10) {
+      toast.error(t("Informe o telefone com DDD."));
+      return;
+    }
+    // Quem já digitou com o 55 na frente não ganha um segundo.
+    const completo = digitos.startsWith("55") && digitos.length >= 12 ? digitos : `55${digitos}`;
+    if (await abrir({ phone_number: `+${completo}` })) setNumero("");
+  };
+
+  return (
+    <form onSubmit={enviar} className="flex items-center gap-2 border-t border-border bg-background p-3">
+      <span className="inline-flex h-9 shrink-0 items-center rounded-md border border-border px-2 text-sm tabular-nums text-text-muted">
+        +55
+      </span>
+      <Input
+        type="tel"
+        inputMode="tel"
+        autoComplete="off"
+        placeholder="(92) 99999-9999"
+        aria-label={t("Telefone com DDD")}
+        value={numero}
+        onChange={(e) => setNumero(e.target.value)}
+        className="h-9 min-w-0"
+      />
+      <Button type="submit" size="sm" variant="outline" className="h-9 shrink-0" disabled={abrindo}>
+        {abrindo ? t("Abrindo…") : t("Conversar")}
+      </Button>
+    </form>
+  );
+}

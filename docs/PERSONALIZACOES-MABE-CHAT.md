@@ -15,6 +15,7 @@ app é montada por nós, a cada versão oficial nova.
 | Funis, ficha do negócio | **Iniciar conversa no Inbox**, quando o negócio tem telefone e ainda não tem conversa. |
 | Contatos, ficha do contato | **Iniciar conversa no Inbox**, quando o contato tem telefone e ainda não tem conversa. |
 | Inbox (`/app/inbox`), para quem é atendente | **Mesa do atendente**: abas Novos/Meus/Outros, "Iniciar atendimento" antes de responder (espiar não marca como lida), Transferir, Concluir com motivo (etiqueta `motivo: …` + nota interna), origem do anúncio, painel do cliente e "+55 Conversar". Botões "Modo atendente / Modo completo" alternam. Pesquisa e decisões: [PESQUISA-TELA-ATENDIMENTO-2026-09-30.md](PESQUISA-TELA-ATENDIMENTO-2026-09-30.md) |
+| Configurações › **Visual Mabe** (só admin) | O "mod" da Mabe num lugar só: **Cores da Mabe** (dourado; desligado = visual original), **Mesa do atendente** (desligada = Inbox completo para todos), **Atendente pode trocar para o Inbox completo** e **Motivos de conclusão** (um por linha). "Restaurar padrão da Mabe" volta tudo ao de fábrica. |
 
 Regras que valem nessas telas:
 
@@ -39,7 +40,12 @@ Regras que valem nessas telas:
    - `hooks/team/useCadastroDireto.ts`
    - `lib/schemas/cadastro-direto.ts`
 
+   - `components/mabe/*` (mesa do atendente, visual e ajustes)
+   - `app/app/settings/visual-mabe`
+
    Nas telas oficiais, só entram poucas linhas marcadas com "Personalização Ótica Mabe".
+   Os ajustes do Visual Mabe ficam em `organizations.settings.mabe`, uma chave que
+   nenhuma versão oficial lê ou grava: atualizar não apaga nem muda a escolha.
 2. O workflow **`.github/workflows/mabe-imagem.yml`** (na `main`) roda a cada 30 minutos:
    1. Pega a última release oficial.
    2. Aplica os nossos commits por cima (cherry-pick).

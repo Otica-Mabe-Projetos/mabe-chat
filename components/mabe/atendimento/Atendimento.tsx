@@ -420,7 +420,9 @@ export function Atendimento({ initialSelectedId = null }: { initialSelectedId?: 
               <ChatCircle size={40} weight="thin" className="text-text-subtle" aria-hidden />
               <p className="text-base font-medium text-text">{t("Escolha um atendimento na lista")}</p>
               <p className="max-w-xs text-sm text-text-muted">
-                {t("Em Novos, quem espera há mais tempo aparece primeiro. Clique para ver a conversa e em “Iniciar atendimento” para responder.")}
+                {ordemDaLista === "espera"
+                  ? t("Em Novos, quem espera há mais tempo aparece primeiro. Clique para ver a conversa e em “Iniciar atendimento” para responder.")
+                  : t("As conversas mais recentes ficam no topo. Clique para ver a conversa e em “Iniciar atendimento” para responder.")}
               </p>
             </div>
           )}

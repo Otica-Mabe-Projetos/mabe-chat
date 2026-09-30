@@ -9,6 +9,7 @@ import { ProvedorDeCoresDasEtiquetas } from "@/components/tags/CoresDasEtiquetas
 import { AppShell } from "./_components/AppShell";
 import { EstiloDaMarcaDaOrganizacao } from "./_components/EstiloDaMarcaDaOrganizacao";
 import { EstiloMabe } from "@/components/mabe/visual/EstiloMabe";
+import { comMarcaMabe } from "@/components/mabe/visual/marca";
 import { MfaEnrollGate } from "@/components/auth/MfaEnrollGate";
 import { cssDaMarca, ESCOPO_DA_ORGANIZACAO } from "@/lib/branding/css";
 import { marcaDaInstalacao } from "@/lib/branding/instalacao";
@@ -180,6 +181,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     if (Object.keys(marcaDoTenant).length > 0) {
       activeOrg = { ...activeOrg, marca: marcaDoTenant };
     }
+    // Personalização Ótica Mabe: logo do "Visual Mabe" (components/mabe/visual/marca.ts).
+    activeOrg = await comMarcaMabe(activeOrg);
   } else {
     const [isEnrolled, mfaRequired] = await Promise.all([
       isMfaEnrolled(),

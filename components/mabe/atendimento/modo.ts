@@ -7,20 +7,20 @@
  * e os outros papéis no completo; quem pode trocar guarda a escolha num cookie,
  * para a página (servidor) decidir antes de pintar, sem piscar a tela errada.
  */
-import type { AjustesMabe } from "@/components/mabe/ajustes/ajustes";
+import { vale, type AjustesMabe } from "@/components/mabe/ajustes/ajustes";
 
 export const COOKIE_DO_MODO = "mabe_modo_inbox";
 
 export type ModoDoInbox = "atendente" | "completo";
 
-type Regras = Pick<AjustesMabe, "mesa" | "atendente_troca">;
+type Regras = AjustesMabe;
 
 export function podeTrocarModo(papel: string, a: Regras): boolean {
-  return a.mesa && (papel !== "agent" || a.atendente_troca);
+  return vale(a, "mesa") && (papel !== "agent" || a.atendente_troca);
 }
 
 export function modoDoInbox(cookie: string | undefined, papel: string, a: Regras): ModoDoInbox {
-  if (!a.mesa) return "completo";
+  if (!vale(a, "mesa")) return "completo";
   if (podeTrocarModo(papel, a) && (cookie === "atendente" || cookie === "completo")) return cookie;
   return papel === "agent" ? "atendente" : "completo";
 }

@@ -27,7 +27,7 @@ export default async function VisualMabePage() {
         <h1 className="text-2xl font-semibold tracking-tight">{traduzir("Visual Mabe", idioma)}</h1>
         <p className="max-w-2xl text-sm text-muted-foreground">
           {traduzir(
-            "A aparência e a mesa de atendimento da Ótica Mabe. Vale para toda a empresa e continua igual depois das atualizações do sistema.",
+            "Um interruptor liga a Ótica Mabe no sistema inteiro. Vale para toda a empresa e continua igual depois das atualizações.",
             idioma,
           )}
         </p>

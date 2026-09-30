@@ -972,7 +972,7 @@ export const NAV_CATALOG = [
   {
     href: "/app/settings/visual-mabe",
     label: "Visual Mabe",
-    description: "Cores da Mabe, mesa do atendente e motivos de conclusão.",
+    description: "Liga o visual da Ótica Mabe: cores, logo, mesa do atendente e motivos.",
     icon: "Palette",
     group: "organizacao",
     section: "Sua empresa",

@@ -156,6 +156,16 @@ export const NAV_CATALOG = [
     // Quantas conversas a IA passou para a equipe e esperam uma pessoa (aba Fila).
     contador: "fila",
   },
+  // Personalização Ótica Mabe: supervisão do atendimento por loja (app/app/lojas).
+  {
+    href: "/app/lojas",
+    label: "Lojas",
+    description: "Como está o atendimento de cada loja: novos, em atendimento, esperando e concluídos.",
+    icon: "Storefront",
+    group: "atendimento",
+    sidebar: true,
+    minRole: "manager",
+  },
   {
     href: "/app/radar",
     label: "Radar",
@@ -974,6 +984,16 @@ export const NAV_CATALOG = [
     label: "Visual Mabe",
     description: "Liga o visual da Ótica Mabe: cores, logo, mesa do atendente e motivos.",
     icon: "Palette",
+    group: "organizacao",
+    section: "Sua empresa",
+    minRole: "admin",
+  },
+  // Personalização Ótica Mabe: lojas por número e quem atende cada loja (components/mabe/lojas).
+  {
+    href: "/app/settings/lojas",
+    label: "Lojas",
+    description: "De qual loja é cada número de WhatsApp e quem atende cada loja.",
+    icon: "Storefront",
     group: "organizacao",
     section: "Sua empresa",
     minRole: "admin",

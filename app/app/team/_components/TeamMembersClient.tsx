@@ -2,6 +2,7 @@
 
 import { MemberInterfaceDialog } from "@/components/team/MemberInterfaceDialog";
 import { TrocarSenhaDialog } from "@/components/team/CadastroDireto";
+import { LojasDoMembroDialog } from "@/components/mabe/lojas/LojasDoMembroDialog";
 import { useTagDeIdioma } from "@/hooks/i18n/useLocaleDeData";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -61,6 +62,7 @@ export function TeamMembersClient({ currentUserId, canManage }: Props) {
   const [interfaceMember, setInterfaceMember] = useState<TeamMember | null>(null);
   const [revokeDialog, setRevokeDialog] = useState<TeamMember | null>(null);
   const [senhaMember, setSenhaMember] = useState<TeamMember | null>(null);
+  const [lojasMember, setLojasMember] = useState<TeamMember | null>(null);
 
   if (isLoading) {
     return <p className="text-sm text-muted-foreground">{t("Carregando…")}</p>;
@@ -183,6 +185,11 @@ export function TeamMembersClient({ currentUserId, canManage }: Props) {
                               {t("Trocar senha")}
                             </DropdownMenuItem>
                           ) : null}
+                          {!m.revoked_at && m.role !== "admin" ? (
+                            <DropdownMenuItem onClick={() => setLojasMember(m)}>
+                              {t("Lojas que atende")}
+                            </DropdownMenuItem>
+                          ) : null}
                           {/*
                             Revogar e reativar são exclusivos: oferecer os dois
                             na mesma linha convidaria ao clique errado. Sem o
@@ -218,6 +225,14 @@ export function TeamMembersClient({ currentUserId, canManage }: Props) {
         </Table>
       </div>
 
+      {lojasMember && (
+        <LojasDoMembroDialog
+          key={lojasMember.user_id}
+          userId={lojasMember.user_id}
+          nome={lojasMember.full_name || lojasMember.email || ""}
+          onClose={() => setLojasMember(null)}
+        />
+      )}
       {senhaMember && (
         <TrocarSenhaDialog
           key={senhaMember.user_id}

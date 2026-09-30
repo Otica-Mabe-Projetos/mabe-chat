@@ -36,6 +36,13 @@ import { channelLabel, useChannelSessions } from "@/hooks/channels/useChannelSes
 import { useT } from "@/hooks/i18n/useT";
 import { ArrowRight, ChatCircle } from "@/lib/ui/icons";
 import { AlternarModo } from "@/components/mabe/atendimento/AlternarModo";
+import { numeroPermitido, useMabe } from "@/components/mabe/ajustes/ProvedorMabe";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 type Abertura = {
   contact_id?: string;
@@ -69,7 +76,15 @@ export function useAbrirConversa() {
       await Promise.all(
         ["contacts", "leads", "board"].map((k) => qc.invalidateQueries({ queryKey: [k] })),
       );
-      router.push(`/app/inbox?id=${json.data.conversation_id}`);
+      // Mantém aba e loja da mesa (?aba=, ?numero=) ao abrir a conversa nova.
+      const atual = new URLSearchParams(window.location.pathname === "/app/inbox" ? window.location.search : "");
+      const params = new URLSearchParams();
+      for (const k of ["aba", "numero", "filter"]) {
+        const v = atual.get(k);
+        if (v) params.set(k, v);
+      }
+      params.set("id", json.data.conversation_id);
+      router.push(`/app/inbox?${params.toString()}`);
       return true;
     } catch (err) {
       toast.error(t(err instanceof Error ? err.message : "Não foi possível abrir a conversa."));
@@ -93,10 +108,13 @@ export function NovaConversaBarra() {
   const [nome, setNome] = useState("");
   const [numero, setNumero] = useState("");
   const [erro, setErro] = useState<string | null>(null);
+  const { numerosPermitidos } = useMabe();
 
   if (!podeResponder) return null;
 
-  const conectados = (sessoes ?? []).filter((s) => s.status === "WORKING");
+  const conectados = (sessoes ?? []).filter(
+    (s) => s.status === "WORKING" && numeroPermitido(numerosPermitidos, s.id),
+  );
   const numeroEscolhido = numero || conectados[0]?.id || "";
 
   const fechar = () => {
@@ -110,6 +128,10 @@ export function NovaConversaBarra() {
     e.preventDefault();
     if (telefone.replace(/\D/g, "").length < 10) {
       setErro(t("Informe o telefone com DDD."));
+      return;
+    }
+    if (numerosPermitidos && !numeroEscolhido) {
+      setErro(t("O número da sua loja está desconectado. Reconecte em Conexões."));
       return;
     }
     setErro(null);
@@ -202,18 +224,27 @@ export function NovaConversaBarra() {
   );
 }
 
-/** "Iniciar conversa" na ficha do negócio cujo contato tem telefone e ainda não tem conversa. */
+/**
+ * "Iniciar conversa" na ficha do negócio cujo contato tem telefone e ainda não tem
+ * conversa. Com mais de um número conectado, pergunta por qual loja sai — sem isso
+ * a mensagem sairia pelo número mais antigo, que pode ser de outra loja.
+ */
 export function IniciarConversaNoDossie({ contactId }: { contactId: string }) {
   const t = useT();
   const podeResponder = usePermission("inbox.reply");
+  const { data: sessoes } = useChannelSessions();
+  const { numerosPermitidos } = useMabe();
   const { abrir, abrindo } = useAbrirConversa();
   if (!podeResponder) return null;
+  const conectados = (sessoes ?? []).filter(
+    (s) => s.status === "WORKING" && numeroPermitido(numerosPermitidos, s.id),
+  );
 
-  return (
+  const botao = (onClick?: () => void) => (
     <button
       type="button"
       disabled={abrindo}
-      onClick={() => void abrir({ contact_id: contactId })}
+      onClick={onClick}
       className="group mt-3 flex w-full items-center gap-2.5 rounded-md border border-border bg-muted/40 px-3 py-2 text-left transition-colors hover:border-primary/40 hover:bg-muted disabled:opacity-60"
     >
       <ChatCircle size={16} weight="regular" className="shrink-0 text-text-muted" aria-hidden />
@@ -227,5 +258,27 @@ export function IniciarConversaNoDossie({ contactId }: { contactId: string }) {
         aria-hidden
       />
     </button>
+  );
+
+  if (conectados.length <= 1) {
+    return botao(() => {
+      if (numerosPermitidos && !conectados[0]) {
+        toast.error(t("O número da sua loja está desconectado. Reconecte em Conexões."));
+        return;
+      }
+      void abrir({ contact_id: contactId, channel_session_id: conectados[0]?.id });
+    });
+  }
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>{botao()}</DropdownMenuTrigger>
+      <DropdownMenuContent align="start">
+        {conectados.map((s) => (
+          <DropdownMenuItem key={s.id} onClick={() => void abrir({ contact_id: contactId, channel_session_id: s.id })}>
+            {t("Sair por")} {channelLabel(s, t)}
+          </DropdownMenuItem>
+        ))}
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }

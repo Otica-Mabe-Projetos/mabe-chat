@@ -8,6 +8,7 @@
  * próprio cabeçalho, que mede a coluna e não a janela). O cabeçalho oficial
  * continua intacto no Inbox completo.
  */
+import { rotuloDoContato } from "@/lib/contacts/rotulo-do-contato";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
@@ -67,7 +68,7 @@ export function CabecalhoDoAtendimento({
   const t = useT();
   const c = conversa.contacts;
   const telefone = c?.phone_number ? phoneForDisplay(c.phone_number) : null;
-  const nome = c?.display_name || c?.name || telefone || t("Sem nome");
+  const nome = rotuloDoContato(c, t);
   const numero =
     conversa.channel_sessions?.display_name ||
     (conversa.channel_sessions?.phone_number ? phoneForDisplay(conversa.channel_sessions.phone_number) : null);

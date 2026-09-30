@@ -10,7 +10,10 @@ import { cookies } from "next/headers";
 import { Atendimento } from "@/components/mabe/atendimento/Atendimento";
 import { COOKIE_DO_MODO, modoDoInbox, podeTrocarModo } from "@/components/mabe/atendimento/modo";
 import { lerAjustesMabe } from "@/components/mabe/ajustes/ler";
+import { vale } from "@/components/mabe/ajustes/ajustes";
 import { ProvedorMabe } from "@/components/mabe/ajustes/ProvedorMabe";
+import { lerLojas } from "@/components/mabe/lojas/ler";
+import { numerosVisiveis } from "@/components/mabe/lojas/lojas";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Inbox" };
@@ -18,7 +21,7 @@ export const metadata: Metadata = { title: "Inbox" };
 export default async function InboxPage({
   searchParams,
 }: {
-  searchParams: Promise<{ id?: string; rascunho?: string }>;
+  searchParams: Promise<{ id?: string; rascunho?: string; numero?: string }>;
 }) {
   const user = await loadAuthUser();
   if (!user) redirect("/login");
@@ -43,12 +46,18 @@ export default async function InboxPage({
       </div>
     );
   }
-  const { id, rascunho } = await searchParams;
+  const { id, rascunho, numero } = await searchParams;
   // Personalização Ótica Mabe: mesa do atendente (components/mabe/atendimento), regida
   // por Configurações › Visual Mabe (components/mabe/ajustes).
   const mabe = await lerAjustesMabe(activeOrg.orgId);
-  const contextoMabe = { podeTrocarModo: podeTrocarModo(activeOrg.role, mabe), motivos: mabe.motivos };
-  if (modoDoInbox((await cookies()).get(COOKIE_DO_MODO)?.value, activeOrg.role, mabe) === "atendente") {
+  const contextoMabe = {
+    podeTrocarModo: podeTrocarModo(activeOrg.role, mabe),
+    motivos: mabe.motivos,
+    numerosPermitidos: numerosVisiveis(await lerLojas(activeOrg.orgId), user.id, activeOrg.role),
+  };
+  // ?numero= é o filtro de loja, que só existe na mesa: o link do painel de Lojas abre a mesa.
+  const mesaPorLink = !!numero && vale(mabe, "mesa");
+  if (mesaPorLink || modoDoInbox((await cookies()).get(COOKIE_DO_MODO)?.value, activeOrg.role, mabe) === "atendente") {
     return (
       <ProvedorMabe valor={contextoMabe}>
         <Atendimento initialSelectedId={id ?? null} />

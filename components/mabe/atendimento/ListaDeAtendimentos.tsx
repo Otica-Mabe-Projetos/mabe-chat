@@ -13,7 +13,9 @@ import { toast } from "sonner";
 import { ConversationList } from "@/components/inbox/ConversationList";
 import { useAbrirConversa } from "@/components/inbox/NovaConversa";
 import { Button } from "@/components/ui/button";
+import { numeroPermitido, useMabe } from "@/components/mabe/ajustes/ProvedorMabe";
 import { usePermission } from "@/hooks/auth/AuthProvider";
+import { channelLabel, useChannelSessions } from "@/hooks/channels/useChannelSessions";
 import { useT } from "@/hooks/i18n/useT";
 import type { ConversationsFilters, useConversationsRealtime } from "@/hooks/inbox/useConversationsRealtime";
 import { MagnifyingGlass } from "@/lib/ui/icons";
@@ -30,6 +32,9 @@ interface Props {
   onBusca: (v: string) => void;
   somenteNaoLidas: boolean;
   onSomenteNaoLidas: (v: boolean) => void;
+  /** Filtro de loja: o número (channel_session_id) escolhido, ou `null` para todas. */
+  numero: string | null;
+  onNumero: (id: string | null) => void;
   // A mesma forma que `ConversationList` recebe do Inbox oficial.
   listQuery: ReturnType<typeof useConversationsRealtime>;
   filters: ConversationsFilters;
@@ -92,6 +97,7 @@ export function ListaDeAtendimentos(props: Props) {
           })}
         </div>
 
+        <SeletorDeLoja numero={props.numero} onNumero={props.onNumero} />
         <div className="flex items-center gap-2 px-3 pb-3 pt-2.5">
           <div className="flex shrink-0 rounded-md bg-surface-elevated p-0.5" role="group" aria-label={t("Filtro")}>
             {[
@@ -138,22 +144,63 @@ export function ListaDeAtendimentos(props: Props) {
           onLimparFiltros={() => {
             props.onBusca("");
             props.onSomenteNaoLidas(false);
+            props.onNumero(null);
           }}
         />
       </div>
 
-      <ConversarPeloNumero />
+      <ConversarPeloNumero numero={props.numero} />
+    </div>
+  );
+}
+
+/** Os números (lojas) que esta pessoa enxerga, na ordem da tela de Conexões. */
+function useNumerosDaPessoa() {
+  const { data: sessoes } = useChannelSessions();
+  const { numerosPermitidos } = useMabe();
+  return (sessoes ?? []).filter((s) => numeroPermitido(numerosPermitidos, s.id));
+}
+
+/** "Todas as lojas / L15 · Manaus Centro / …" — só aparece com 2 ou mais números. */
+function SeletorDeLoja({ numero, onNumero }: { numero: string | null; onNumero: (id: string | null) => void }) {
+  const t = useT();
+  const numeros = useNumerosDaPessoa();
+  if (numeros.length < 2) return null;
+  const ordenados = [...numeros].sort((a, b) => channelLabel(a, t).localeCompare(channelLabel(b, t), "pt-BR"));
+  return (
+    <div className="px-3 pt-2.5">
+      <select
+        aria-label={t("Loja")}
+        value={numero ?? ""}
+        onChange={(e) => onNumero(e.target.value || null)}
+        className="h-9 w-full rounded-md border border-border bg-surface px-2 text-sm"
+      >
+        <option value="">{t("Todas as lojas")}</option>
+        {ordenados.map((s) => (
+          <option key={s.id} value={s.id}>
+            {channelLabel(s, t)}
+            {s.status === "WORKING" ? "" : ` (${t("desconectado")})`}
+          </option>
+        ))}
+      </select>
     </div>
   );
 }
 
 /** O "+55 (00) 0000-0000 · Conversar" do VBot: abre a conversa já, sem diálogo. */
-function ConversarPeloNumero() {
+function ConversarPeloNumero({ numero: lojaEscolhida }: { numero: string | null }) {
   const t = useT();
   const podeResponder = usePermission("inbox.reply");
   const { abrir, abrindo } = useAbrirConversa();
   const [numero, setNumero] = useState("");
+  const [saidaEscolhida, setSaidaEscolhida] = useState("");
+  const conectados = useNumerosDaPessoa().filter((s) => s.status === "WORKING");
   if (!podeResponder) return null;
+
+  // Por qual número (loja) a mensagem sai: a loja filtrada, o único número, ou a escolha.
+  const lojaConectada = lojaEscolhida && conectados.some((s) => s.id === lojaEscolhida) ? lojaEscolhida : null;
+  const precisaEscolher = !lojaEscolhida && conectados.length > 1;
+  const saida = lojaConectada ?? (conectados.length === 1 ? (conectados[0]?.id ?? null) : saidaEscolhida || null);
 
   const enviar = async (e: FormEvent) => {
     e.preventDefault();
@@ -164,11 +211,34 @@ function ConversarPeloNumero() {
     }
     // Quem já digitou com o 55 na frente não ganha um segundo.
     const completo = digitos.startsWith("55") && digitos.length >= 12 ? digitos : `55${digitos}`;
-    if (await abrir({ phone_number: `+${completo}` })) setNumero("");
+    if (lojaEscolhida && !lojaConectada) {
+      toast.error(t("O número desta loja está desconectado. Reconecte em Conexões."));
+      return;
+    }
+    if (!saida) {
+      toast.error(conectados.length ? t("Escolha por qual loja a conversa sai.") : t("Nenhum número conectado."));
+      return;
+    }
+    if (await abrir({ phone_number: `+${completo}`, channel_session_id: saida })) setNumero("");
   };
 
   return (
-    <form onSubmit={enviar} className="flex items-center gap-2 border-t border-border px-3 py-3">
+    <form onSubmit={enviar} className="flex flex-wrap items-center gap-2 border-t border-border px-3 py-3">
+      {precisaEscolher ? (
+        <select
+          aria-label={t("Sair pela loja")}
+          value={saidaEscolhida}
+          onChange={(e) => setSaidaEscolhida(e.target.value)}
+          className="h-9 w-full rounded-md border border-border bg-surface px-2 text-sm"
+        >
+          <option value="">{t("Sair pela loja…")}</option>
+          {conectados.map((s) => (
+            <option key={s.id} value={s.id}>
+              {channelLabel(s, t)}
+            </option>
+          ))}
+        </select>
+      ) : null}
       {/* O +55 é prefixo do campo, não uma caixa a mais: uma borda só. */}
       <label className="flex h-9 min-w-0 flex-1 items-center gap-1.5 rounded-md border border-border px-2 focus-within:ring-2 focus-within:ring-accent">
         <span className="shrink-0 text-sm tabular-nums text-text-muted">+55</span>

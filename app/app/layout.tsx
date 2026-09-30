@@ -10,6 +10,10 @@ import { AppShell } from "./_components/AppShell";
 import { EstiloDaMarcaDaOrganizacao } from "./_components/EstiloDaMarcaDaOrganizacao";
 import { EstiloMabe } from "@/components/mabe/visual/EstiloMabe";
 import { comMarcaMabe } from "@/components/mabe/visual/marca";
+import { ProvedorMabe } from "@/components/mabe/ajustes/ProvedorMabe";
+import { PADRAO as PADRAO_MABE } from "@/components/mabe/ajustes/ajustes";
+import { lerLojas } from "@/components/mabe/lojas/ler";
+import { numerosVisiveis } from "@/components/mabe/lojas/lojas";
 import { MfaEnrollGate } from "@/components/auth/MfaEnrollGate";
 import { cssDaMarca, ESCOPO_DA_ORGANIZACAO } from "@/lib/branding/css";
 import { marcaDaInstalacao } from "@/lib/branding/instalacao";
@@ -213,7 +217,18 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           sidebarCollapsed={collapsed}
           podeAtender={Boolean(activeOrg && roleAtLeast(activeOrg.role, "agent"))}
         >
-          {children}
+          {/* Personalização Ótica Mabe: números que a pessoa vê pela restrição por loja. */}
+          <ProvedorMabe
+            valor={{
+              podeTrocarModo: false,
+              motivos: PADRAO_MABE.motivos,
+              numerosPermitidos: activeOrg
+                ? numerosVisiveis(await lerLojas(activeOrg.orgId), user.id, activeOrg.role)
+                : null,
+            }}
+          >
+            {children}
+          </ProvedorMabe>
         </AppShell>
       </VoiceCallProvider>
     </ProvedorDaOcupacaoDoRodape>

@@ -1,5 +1,6 @@
 "use client";
 
+import { nomeDoCanal } from "@/lib/channels/estado";
 import { useLocaleDeData } from "@/hooks/i18n/useLocaleDeData";
 
 import type { Locale } from "date-fns";
@@ -193,7 +194,9 @@ export function ConversationListItem({
   // dois canais é o que decide o tom da resposta e qual número a pessoa vê
   // respondendo. Cai no nome do canal quando não há número (canal recém-criado).
   const canal = conversation.channel_sessions ?? null;
-  const rotuloCanal = canal?.phone_number ?? canal?.display_name ?? null;
+  // Personalização Ótica Mabe: o nome do canal vem PRIMEIRO — ele é a loja
+  // ("L15 · Manaus Centro", Configurações › Lojas) e diz mais que o número.
+  const rotuloCanal = !canal || (!canal.phone_number && !canal.display_name) ? null : nomeDoCanal(canal);
 
   const temSelos =
     visibleTags.length > 0 ||

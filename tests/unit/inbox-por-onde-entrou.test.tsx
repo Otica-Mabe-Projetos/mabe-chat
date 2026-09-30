@@ -46,8 +46,14 @@ const pintar = (conv: ConversationWithContact, mostrarCanal: boolean) =>
   );
 
 describe("mostra o número da empresa quando há mais de um canal", () => {
-  it("pinta o número por onde a conversa entrou", () => {
+  // Personalização Ótica Mabe: o nome do canal (a loja) vem antes do número.
+  it("pinta a loja (nome do canal) por onde a conversa entrou", () => {
     pintar(comCanal({ phone_number: "+19392301037", display_name: "MP wp" }), true);
+    expect(screen.getByText("MP wp")).toBeInTheDocument();
+  });
+
+  it("pinta o número quando o canal não tem nome", () => {
+    pintar(comCanal({ phone_number: "+19392301037", display_name: null }), true);
     expect(screen.getByText("+19392301037")).toBeInTheDocument();
   });
 

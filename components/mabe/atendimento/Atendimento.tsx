@@ -46,6 +46,7 @@ import { ArrowRight, ChatCircle, CheckCircle, Play } from "@/lib/ui/icons";
 import { cn } from "@/lib/utils";
 import { CabecalhoDoAtendimento } from "./CabecalhoDoAtendimento";
 import { ConcluirComMotivo } from "./ConcluirComMotivo";
+import { numeroPermitido, useMabe } from "@/components/mabe/ajustes/ProvedorMabe";
 import { ListaDeAtendimentos, type Aba } from "./ListaDeAtendimentos";
 import { FaixaDoAnuncio } from "./OrigemDoAnuncio";
 import { PainelDoCliente } from "./PainelDoCliente";
@@ -69,6 +70,13 @@ export function Atendimento({ initialSelectedId = null }: { initialSelectedId?: 
   const searchParams = useSearchParams();
   const aba = lerAba(searchParams.get("aba"));
   const idNaUrl = searchParams.get("id");
+  // Filtro de loja = um número (channel_session_id) na URL, para sobreviver ao recarregar.
+  const { numerosPermitidos } = useMabe();
+  const numeroNaUrl = searchParams.get("numero");
+  const numero =
+    numeroNaUrl && /^[0-9a-f-]{36}$/i.test(numeroNaUrl) && numeroPermitido(numerosPermitidos, numeroNaUrl)
+      ? numeroNaUrl
+      : null;
 
   const [busca, setBusca] = useState("");
   const [somenteNaoLidas, setSomenteNaoLidas] = useState(false);
@@ -91,6 +99,16 @@ export function Atendimento({ initialSelectedId = null }: { initialSelectedId?: 
     (nova: Aba) => {
       const params = new URLSearchParams(searchParams.toString());
       params.set("aba", nova);
+      router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+    },
+    [searchParams, router, pathname],
+  );
+
+  const trocarNumero = useCallback(
+    (novo: string | null) => {
+      const params = new URLSearchParams(searchParams.toString());
+      if (novo) params.set("numero", novo);
+      else params.delete("numero");
       router.replace(`${pathname}?${params.toString()}`, { scroll: false });
     },
     [searchParams, router, pathname],
@@ -122,8 +140,9 @@ export function Atendimento({ initialSelectedId = null }: { initialSelectedId?: 
           : { comando: ["humano"] as const }),
       search: buscaValeConsulta(busca) ? busca : undefined,
       unread: somenteNaoLidas || undefined,
+      channel_session_id: numero ?? undefined,
     }),
-    [aba, automaticoDaOrg, busca, somenteNaoLidas],
+    [aba, automaticoDaOrg, busca, somenteNaoLidas, numero],
   );
   const listQ = useConversationsRealtime(filters, orgId);
   const listaDaAba = useMemo(() => {
@@ -139,7 +158,10 @@ export function Atendimento({ initialSelectedId = null }: { initialSelectedId?: 
       },
     } as typeof listQ;
   }, [listQ, aba, user.id]);
-  const contagens = useConversationCounts(orgId, { unread: somenteNaoLidas || undefined });
+  const contagens = useConversationCounts(orgId, {
+    unread: somenteNaoLidas || undefined,
+    channel_session_id: numero ?? undefined,
+  });
 
   const inList = useMemo(
     () => listQ.data?.pages.flatMap((p) => p.data).find((c) => c.id === selectedId) ?? null,
@@ -215,6 +237,8 @@ export function Atendimento({ initialSelectedId = null }: { initialSelectedId?: 
             onBusca={setBusca}
             somenteNaoLidas={somenteNaoLidas}
             onSomenteNaoLidas={setSomenteNaoLidas}
+            numero={numero}
+            onNumero={trocarNumero}
             listQuery={listaDaAba}
             filters={filters}
             selectedId={selectedId}

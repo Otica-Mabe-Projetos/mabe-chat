@@ -6,6 +6,7 @@
  * para a ficha completa e a agenda. O painel de CRM oficial (com IA, demandas e
  * enriquecimento) continua no Inbox completo.
  */
+import { rotuloDoContato } from "@/lib/contacts/rotulo-do-contato";
 import Link from "next/link";
 import { useState } from "react";
 
@@ -29,7 +30,7 @@ export function PainelDoCliente({ conversation }: { conversation: ConversationWi
     );
   }
   const contato = conversation.contacts;
-  const nome = contato?.display_name ?? contato?.name ?? t("Sem nome");
+  const nome = rotuloDoContato(contato, t);
   const telefone = contato?.phone_number ? phoneForDisplay(contato.phone_number) : null;
   const numero = conversation.channel_sessions?.display_name ||
     (conversation.channel_sessions?.phone_number ? phoneForDisplay(conversation.channel_sessions.phone_number) : null);

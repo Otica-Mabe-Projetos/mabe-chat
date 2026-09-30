@@ -97,6 +97,8 @@ interface Props {
    * `draft_id` que o consumo usa depois do clique.
    */
   rascunho?: AvisoDeRascunho | null;
+  /** Personalização Ótica Mabe: a mesa do atendente esconde o cartão "Assistência do agente". */
+  semAssistencia?: boolean;
 }
 
 export const Composer = forwardRef<ComposerHandle, Props>(function Composer(
@@ -114,6 +116,7 @@ export const Composer = forwardRef<ComposerHandle, Props>(function Composer(
     respondendo,
     onCancelarResposta,
     rascunho = null,
+    semAssistencia = false,
   },
   ref,
 ) {
@@ -300,7 +303,7 @@ export const Composer = forwardRef<ComposerHandle, Props>(function Composer(
           mode === "note" && "border-warning/40 bg-warning-bg",
         )}
       >
-        {mode === "reply" && (
+        {mode === "reply" && !semAssistencia && (
           <ReplyReviewPanel conversationId={conversationId} disabled={isDisabled} />
         )}
         <TemplateMenu

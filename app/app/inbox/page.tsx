@@ -6,6 +6,9 @@ import { InboxLayout } from "@/components/inbox/InboxLayout";
 import { traduzir } from "@/lib/i18n/dicionario";
 import { createClient } from "@/lib/supabase/server";
 import { lerRascunho, type AvisoDeRascunho } from "@/lib/inbox/rascunho-sugerido";
+import { cookies } from "next/headers";
+import { Atendimento } from "@/components/mabe/atendimento/Atendimento";
+import { COOKIE_DO_MODO, modoDoInbox } from "@/components/mabe/atendimento/modo";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Inbox" };
@@ -39,6 +42,10 @@ export default async function InboxPage({
     );
   }
   const { id, rascunho } = await searchParams;
+  // Personalização Ótica Mabe: mesa do atendente (components/mabe/atendimento).
+  if (modoDoInbox((await cookies()).get(COOKIE_DO_MODO)?.value, activeOrg.role) === "atendente") {
+    return <Atendimento initialSelectedId={id ?? null} />;
+  }
   // ?rascunho= é a ponta da caixa de entrada da issue #1611: o texto mora no
   // servidor, e a URL só carrega o ID. Aqui a leitura acontece com a SESSÃO do
   // atendente (RLS), então um rascunho de outra organização vira

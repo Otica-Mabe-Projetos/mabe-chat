@@ -35,6 +35,7 @@ import { usePermission } from "@/hooks/auth/AuthProvider";
 import { channelLabel, useChannelSessions } from "@/hooks/channels/useChannelSessions";
 import { useT } from "@/hooks/i18n/useT";
 import { ArrowRight, ChatCircle } from "@/lib/ui/icons";
+import { AlternarModo } from "@/components/mabe/atendimento/AlternarModo";
 
 type Abertura = {
   contact_id?: string;
@@ -43,7 +44,7 @@ type Abertura = {
   channel_session_id?: string;
 };
 
-function useAbrirConversa() {
+export function useAbrirConversa() {
   const t = useT();
   const router = useRouter();
   const qc = useQueryClient();
@@ -121,7 +122,8 @@ export function NovaConversaBarra() {
   };
 
   return (
-    <div className="flex items-center justify-end border-b border-border px-3 py-2">
+    <div className="flex items-center justify-between gap-2 border-b border-border px-3 py-2">
+      <AlternarModo para="atendente" />
       <Button size="sm" onClick={() => setAberto(true)}>
         <ChatCircle size={16} weight="regular" aria-hidden />
         {t("Nova conversa")}

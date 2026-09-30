@@ -2,7 +2,7 @@
 
 import { MemberInterfaceDialog } from "@/components/team/MemberInterfaceDialog";
 import { TrocarSenhaDialog } from "@/components/team/CadastroDireto";
-import { LojasDoMembroDialog } from "@/components/mabe/lojas/LojasDoMembroDialog";
+import { LojasDoMembroDialog, ResumoDeLojasDoMembro } from "@/components/mabe/lojas/LojasDoMembroDialog";
 import { useTagDeIdioma } from "@/hooks/i18n/useLocaleDeData";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -97,6 +97,8 @@ export function TeamMembersClient({ currentUserId, canManage }: Props) {
                     {m.full_name ?? m.email ?? m.user_id.slice(0, 8)}
                   </div>
                   {m.email ? <div className="text-xs text-muted-foreground">{m.email}</div> : null}
+                  {/* Personalização Ótica Mabe: quais lojas esta pessoa vê. */}
+                  <ResumoDeLojasDoMembro userId={m.user_id} papel={m.role} />
                 </TableCell>
                 <TableCell>
                   {canManage && m.user_id !== currentUserId ? (

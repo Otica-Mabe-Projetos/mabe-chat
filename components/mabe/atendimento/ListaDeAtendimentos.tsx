@@ -32,9 +32,11 @@ interface Props {
   onBusca: (v: string) => void;
   somenteNaoLidas: boolean;
   onSomenteNaoLidas: (v: boolean) => void;
-  /** Filtro de loja: o número (channel_session_id) escolhido, ou `null` para todas. */
+  /** Filtro de loja: "loja:COD" ou "numero:ID", ou `null` para todas. */
   numero: string | null;
-  onNumero: (id: string | null) => void;
+  /** Os números cobertos pelo filtro (todos os da loja), ou `null` sem filtro. */
+  numerosDaSelecao: string[] | null;
+  onNumero: (valor: string | null) => void;
   // A mesma forma que `ConversationList` recebe do Inbox oficial.
   listQuery: ReturnType<typeof useConversationsRealtime>;
   filters: ConversationsFilters;
@@ -149,7 +151,7 @@ export function ListaDeAtendimentos(props: Props) {
         />
       </div>
 
-      <ConversarPeloNumero numero={props.numero} />
+      <ConversarPeloNumero numerosDaSelecao={props.numerosDaSelecao} />
     </div>
   );
 }
@@ -161,12 +163,24 @@ function useNumerosDaPessoa() {
   return (sessoes ?? []).filter((s) => numeroPermitido(numerosPermitidos, s.id));
 }
 
-/** "Todas as lojas / L15 · Manaus Centro / …" — só aparece com 2 ou mais números. */
-function SeletorDeLoja({ numero, onNumero }: { numero: string | null; onNumero: (id: string | null) => void }) {
+/**
+ * "Todas as lojas / BASE · Mabe Base / L15 · Manaus Centro / …" — UMA opção por
+ * loja (todos os números dela juntos); número sem loja aparece sozinho. Só com 2
+ * ou mais opções.
+ */
+function SeletorDeLoja({ numero, onNumero }: { numero: string | null; onNumero: (v: string | null) => void }) {
   const t = useT();
   const numeros = useNumerosDaPessoa();
-  if (numeros.length < 2) return null;
-  const ordenados = [...numeros].sort((a, b) => channelLabel(a, t).localeCompare(channelLabel(b, t), "pt-BR"));
+  const { lojaDosNumeros } = useMabe();
+  const lojas = new Map<string, { nome: string; n: number }>();
+  const soltos: typeof numeros = [];
+  for (const s of numeros) {
+    const l = lojaDosNumeros?.[s.id];
+    if (l) lojas.set(l.codigo, { nome: l.nome, n: (lojas.get(l.codigo)?.n ?? 0) + 1 });
+    else soltos.push(s);
+  }
+  if (lojas.size + soltos.length < 2) return null;
+  const ordenadas = [...lojas.entries()].sort(([a], [b]) => a.localeCompare(b, "pt-BR"));
   return (
     <div className="px-3 pt-2.5">
       <select
@@ -176,10 +190,15 @@ function SeletorDeLoja({ numero, onNumero }: { numero: string | null; onNumero: 
         className="h-9 w-full rounded-md border border-border bg-surface px-2 text-sm"
       >
         <option value="">{t("Todas as lojas")}</option>
-        {ordenados.map((s) => (
-          <option key={s.id} value={s.id}>
-            {channelLabel(s, t)}
-            {s.status === "WORKING" ? "" : ` (${t("desconectado")})`}
+        {ordenadas.map(([codigo, l]) => (
+          <option key={codigo} value={`loja:${codigo}`}>
+            {codigo} · {l.nome}
+            {l.n > 1 ? ` (${l.n} ${t("números")})` : ""}
+          </option>
+        ))}
+        {soltos.map((s) => (
+          <option key={s.id} value={`numero:${s.id}`}>
+            {channelLabel(s, t)} ({t("sem loja")})
           </option>
         ))}
       </select>
@@ -188,19 +207,26 @@ function SeletorDeLoja({ numero, onNumero }: { numero: string | null; onNumero: 
 }
 
 /** O "+55 (00) 0000-0000 · Conversar" do VBot: abre a conversa já, sem diálogo. */
-function ConversarPeloNumero({ numero: lojaEscolhida }: { numero: string | null }) {
+function ConversarPeloNumero({ numerosDaSelecao }: { numerosDaSelecao: string[] | null }) {
   const t = useT();
   const podeResponder = usePermission("inbox.reply");
   const { abrir, abrindo } = useAbrirConversa();
   const [numero, setNumero] = useState("");
   const [saidaEscolhida, setSaidaEscolhida] = useState("");
-  const conectados = useNumerosDaPessoa().filter((s) => s.status === "WORKING");
+  const todosConectados = useNumerosDaPessoa().filter((s) => s.status === "WORKING");
   if (!podeResponder) return null;
 
-  // Por qual número (loja) a mensagem sai: a loja filtrada, o único número, ou a escolha.
-  const lojaConectada = lojaEscolhida && conectados.some((s) => s.id === lojaEscolhida) ? lojaEscolhida : null;
-  const precisaEscolher = !lojaEscolhida && conectados.length > 1;
-  const saida = lojaConectada ?? (conectados.length === 1 ? (conectados[0]?.id ?? null) : saidaEscolhida || null);
+  // Por qual número a mensagem sai: os da loja filtrada (ou todos); com um só, ele;
+  // com vários, a pessoa escolhe.
+  const conectados = numerosDaSelecao ? todosConectados.filter((s) => numerosDaSelecao.includes(s.id)) : todosConectados;
+  const lojaForaDoAr = !!numerosDaSelecao && conectados.length === 0;
+  const precisaEscolher = conectados.length > 1;
+  const saida =
+    conectados.length === 1
+      ? (conectados[0]?.id ?? null)
+      : conectados.some((s) => s.id === saidaEscolhida)
+        ? saidaEscolhida
+        : null;
 
   const enviar = async (e: FormEvent) => {
     e.preventDefault();
@@ -211,7 +237,7 @@ function ConversarPeloNumero({ numero: lojaEscolhida }: { numero: string | null 
     }
     // Quem já digitou com o 55 na frente não ganha um segundo.
     const completo = digitos.startsWith("55") && digitos.length >= 12 ? digitos : `55${digitos}`;
-    if (lojaEscolhida && !lojaConectada) {
+    if (lojaForaDoAr) {
       toast.error(t("O número desta loja está desconectado. Reconecte em Conexões."));
       return;
     }
@@ -226,12 +252,12 @@ function ConversarPeloNumero({ numero: lojaEscolhida }: { numero: string | null 
     <form onSubmit={enviar} className="flex flex-wrap items-center gap-2 border-t border-border px-3 py-3">
       {precisaEscolher ? (
         <select
-          aria-label={t("Sair pela loja")}
+          aria-label={t("Sair pelo número")}
           value={saidaEscolhida}
           onChange={(e) => setSaidaEscolhida(e.target.value)}
           className="h-9 w-full rounded-md border border-border bg-surface px-2 text-sm"
         >
-          <option value="">{t("Sair pela loja…")}</option>
+          <option value="">{t("Sair pelo número…")}</option>
           {conectados.map((s) => (
             <option key={s.id} value={s.id}>
               {channelLabel(s, t)}

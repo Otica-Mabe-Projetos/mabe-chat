@@ -243,6 +243,21 @@ export async function definirAcessoDoMembro(userId: unknown, acesso: unknown): P
   return aviso ? { ok: false, erro: aviso } : { ok: true };
 }
 
+/** Resumo "quem vê quais lojas" para a lista da Equipe (só admin). */
+export async function lerResumoDeLojasDaEquipe(): Promise<
+  { ok: true; trava: boolean; porPessoa: Record<string, string> } | { ok: false; erro: string }
+> {
+  const ctx = await exigirAdmin();
+  if (typeof ctx === "string") return { ok: false, erro: ctx };
+  const { data } = await createAdminClient().from("organizations").select("settings").eq("id", ctx.orgId).maybeSingle();
+  const cfg = lojasDeSettings(data?.settings ?? null);
+  const porPessoa: Record<string, string> = {};
+  for (const [uid, a] of Object.entries(cfg.acesso)) {
+    porPessoa[uid] = a.todas ? "Todas as lojas" : a.lojas.join(", ");
+  }
+  return { ok: true, trava: cfg.trava, porPessoa };
+}
+
 /** O que o seletor de loja nos cartões de Conexões precisa: lojas ativas e a loja de cada número. */
 export async function lerLojasParaConexoes(): Promise<
   | { ok: true; lojas: Array<{ codigo: string; rotulo: string; ativa: boolean }>; numeros: Record<string, string>; trava: boolean }

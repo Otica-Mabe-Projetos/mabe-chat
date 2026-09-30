@@ -112,6 +112,8 @@ export interface ConversationsFilters {
   is_group?: boolean;
   /** Personalização Ótica Mabe: "recentes" = mais novas no topo também na fila. */
   ordem?: "recentes";
+  /** Personalização Ótica Mabe: os números de uma loja. */
+  numeros?: string[];
 }
 
 interface ListResponse {
@@ -159,6 +161,7 @@ export function useConversationsRealtime(
       if (filters.tagMode === "ou") qs.set("modo", "ou");
       if (filters.is_group !== undefined) qs.set("is_group", filters.is_group ? "true" : "false");
       if (filters.ordem) qs.set("ordem", filters.ordem);
+      if (filters.numeros?.length) qs.set("numeros", filters.numeros.join(","));
       if (pageParam) qs.set("cursor", pageParam);
       qs.set("limit", "50");
       try {

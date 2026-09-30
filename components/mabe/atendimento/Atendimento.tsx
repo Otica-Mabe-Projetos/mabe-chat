@@ -71,12 +71,25 @@ export function Atendimento({ initialSelectedId = null }: { initialSelectedId?: 
   const aba = lerAba(searchParams.get("aba"));
   const idNaUrl = searchParams.get("id");
   // Filtro de loja = um número (channel_session_id) na URL, para sobreviver ao recarregar.
-  const { numerosPermitidos, ordemDaLista } = useMabe();
+  const { numerosPermitidos, ordemDaLista, lojaDosNumeros } = useMabe();
   const numeroNaUrl = searchParams.get("numero");
   const numero =
     numeroNaUrl && /^[0-9a-f-]{36}$/i.test(numeroNaUrl) && numeroPermitido(numerosPermitidos, numeroNaUrl)
       ? numeroNaUrl
       : null;
+  const loja = searchParams.get("loja");
+  // Filtro de loja = TODOS os números dela que a pessoa enxerga.
+  const numerosDaLoja = useMemo(
+    () =>
+      loja
+        ? Object.entries(lojaDosNumeros ?? {})
+            .filter(([id, l]) => l.codigo === loja && numeroPermitido(numerosPermitidos, id))
+            .map(([id]) => id)
+        : null,
+    [loja, lojaDosNumeros, numerosPermitidos],
+  );
+  // O seletor fala em "loja:COD" ou "numero:ID"; a URL guarda ?loja= ou ?numero=.
+  const selecao = loja ? `loja:${loja}` : numero ? `numero:${numero}` : null;
 
   const [busca, setBusca] = useState("");
   const [somenteNaoLidas, setSomenteNaoLidas] = useState(false);
@@ -107,8 +120,10 @@ export function Atendimento({ initialSelectedId = null }: { initialSelectedId?: 
   const trocarNumero = useCallback(
     (novo: string | null) => {
       const params = new URLSearchParams(searchParams.toString());
-      if (novo) params.set("numero", novo);
-      else params.delete("numero");
+      params.delete("numero");
+      params.delete("loja");
+      if (novo?.startsWith("loja:")) params.set("loja", novo.slice(5));
+      else if (novo?.startsWith("numero:")) params.set("numero", novo.slice(7));
       router.replace(`${pathname}?${params.toString()}`, { scroll: false });
     },
     [searchParams, router, pathname],
@@ -140,11 +155,13 @@ export function Atendimento({ initialSelectedId = null }: { initialSelectedId?: 
           : { comando: ["humano"] as const }),
       search: buscaValeConsulta(busca) ? busca : undefined,
       unread: somenteNaoLidas || undefined,
-      channel_session_id: numero ?? undefined,
+      channel_session_id: numerosDaLoja ? undefined : (numero ?? undefined),
+      // Loja sem número visível: um id impossível, para a lista vir vazia e não inteira.
+      numeros: numerosDaLoja ? (numerosDaLoja.length ? numerosDaLoja : ["00000000-0000-0000-0000-000000000000"]) : undefined,
       // Mais novas no topo (padrão da Mabe), inclusive em Novos.
       ordem: ordemDaLista === "espera" ? undefined : ("recentes" as const),
     }),
-    [aba, automaticoDaOrg, busca, somenteNaoLidas, numero, ordemDaLista],
+    [aba, automaticoDaOrg, busca, somenteNaoLidas, numero, numerosDaLoja, ordemDaLista],
   );
   const listQ = useConversationsRealtime(filters, orgId);
   const listaDaAba = useMemo(() => {
@@ -162,7 +179,8 @@ export function Atendimento({ initialSelectedId = null }: { initialSelectedId?: 
   }, [listQ, aba, user.id]);
   const contagens = useConversationCounts(orgId, {
     unread: somenteNaoLidas || undefined,
-    channel_session_id: numero ?? undefined,
+    channel_session_id: numerosDaLoja ? undefined : (numero ?? undefined),
+    numeros: numerosDaLoja ? (numerosDaLoja.length ? numerosDaLoja : ["00000000-0000-0000-0000-000000000000"]) : undefined,
   });
 
   const inList = useMemo(
@@ -239,7 +257,8 @@ export function Atendimento({ initialSelectedId = null }: { initialSelectedId?: 
             onBusca={setBusca}
             somenteNaoLidas={somenteNaoLidas}
             onSomenteNaoLidas={setSomenteNaoLidas}
-            numero={numero}
+            numero={selecao}
+            numerosDaSelecao={numerosDaLoja ?? (numero ? [numero] : null)}
             onNumero={trocarNumero}
             listQuery={listaDaAba}
             filters={filters}

@@ -7,7 +7,7 @@ import Link from "next/link";
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 
-import type { LojaNoPainel } from "@/components/mabe/lojas/painel";
+import { SEM_LOJA, type LojaNoPainel } from "@/components/mabe/lojas/painel";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { useT } from "@/hooks/i18n/useT";
@@ -121,15 +121,19 @@ function DetalheDaLoja({ loja }: { loja: LojaNoPainel }) {
           <span className="mr-2 font-mono text-sm text-text-muted">{loja.codigo}</span>
           {t(loja.nome)}
         </h2>
-        <div className="flex flex-wrap gap-2">
-          {loja.numeros.map((n) => (
-            <Button key={n.id} asChild size="sm" variant={loja.numeros.length > 1 ? "outline" : "default"}>
-              <Link href={`/app/inbox?aba=novos&numero=${n.id}`}>
-                {loja.numeros.length > 1 ? `${t("Abrir")} ${n.rotulo}` : t("Abrir as conversas desta loja")}
-              </Link>
-            </Button>
-          ))}
-        </div>
+        {loja.numeros.length ? (
+          <Button asChild size="sm">
+            <Link
+              href={
+                loja.codigo === SEM_LOJA
+                  ? `/app/inbox?aba=novos&numero=${loja.numeros[0]?.id}`
+                  : `/app/inbox?aba=novos&loja=${encodeURIComponent(loja.codigo)}`
+              }
+            >
+              {t("Abrir as conversas desta loja")}
+            </Link>
+          </Button>
+        ) : null}
       </div>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">

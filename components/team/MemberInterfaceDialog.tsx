@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { InterfaceEditor } from "./InterfaceEditor";
+import { EditorDeLojasDoMembro } from "@/components/mabe/lojas/LojasDoMembroDialog";
 import { apiClient } from "@/lib/api/client";
 import { showApiError } from "@/components/feedback/ApiErrorToast";
 import {
@@ -54,6 +55,16 @@ export function MemberInterfaceDialog({
         {lerInterface(member.interface_settings).needsAdjustment && (
           <p role="status">{t("A seleção anterior contém áreas que não existem mais. Confira e salve novamente.")}</p>
         )}
+        {/* Personalização Ótica Mabe: quais lojas (WhatsApp) esta pessoa vê e atende. */}
+        {member.role !== "admin" ? (
+          <section className="space-y-2 rounded-md border border-border p-3">
+            <h3 className="text-sm font-semibold">{t("Lojas que atende")}</h3>
+            <p className="text-xs text-muted-foreground">
+              {t("As mensagens do WhatsApp que esta pessoa vê: só as dos números destas lojas.")}
+            </p>
+            <EditorDeLojasDoMembro userId={member.user_id} />
+          </section>
+        ) : null}
         <InterfaceEditor
           value={settings}
           onChange={setSettings}

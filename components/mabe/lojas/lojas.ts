@@ -112,3 +112,13 @@ export function numerosVisiveis(cfg: ConfigLojas, userId: string, papel: string)
     .filter(([, codigo]) => lojas.includes(codigo))
     .map(([id]) => id);
 }
+
+/** channel_session_id → { codigo, nome } da loja (para o filtro por loja nas telas). */
+export function lojaDosNumeros(cfg: ConfigLojas): Record<string, { codigo: string; nome: string }> {
+  const r: Record<string, { codigo: string; nome: string }> = {};
+  for (const [id, codigo] of Object.entries(cfg.numeros)) {
+    const l = lojaPorCodigo(cfg, codigo);
+    r[id] = { codigo, nome: l?.nome ?? codigo };
+  }
+  return r;
+}

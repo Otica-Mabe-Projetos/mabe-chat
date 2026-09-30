@@ -197,6 +197,8 @@ export async function listConversationsHandler(
     query = query.not("status", "in", `(${CONVERSATION_TERMINAL_STATUSES.join(",")})`);
   }
   if (q.channel_session_id) query = query.eq("channel_session_id", q.channel_session_id);
+  // Personalização Ótica Mabe: filtro de loja = todos os números dela.
+  if (q.numeros?.length) query = query.in("channel_session_id", q.numeros);
   // A aba "Grupos" (Task 10). `undefined` (ausente) = sem filtro, a lista
   // mostra tudo, como hoje — checagem explícita contra `undefined`, e não
   // `if (q.is_group)`, porque `"false"` é um valor válido e verdadeiro-truthy

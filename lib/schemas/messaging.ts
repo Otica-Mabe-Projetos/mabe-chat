@@ -376,6 +376,11 @@ export const listConversationsQuerySchema = z.object({
   is_group: z.enum(["true", "false"]).optional(),
   // Personalização Ótica Mabe: "recentes" = mais novas no topo também na fila (ver `ehAFila`).
   ordem: z.enum(["recentes"]).optional(),
+  // Personalização Ótica Mabe: os números de UMA LOJA (vários channel_session_id, vírgula).
+  numeros: z
+    .string()
+    .transform((v) => (v ? v.split(",").map((s) => s.trim()).filter((s) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(s)).slice(0, 50) : undefined))
+    .optional(),
   /**
    * Só as que têm mensagem não lida para o dono.
    *

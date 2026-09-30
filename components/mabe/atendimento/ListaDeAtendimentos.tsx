@@ -13,7 +13,6 @@ import { toast } from "sonner";
 import { ConversationList } from "@/components/inbox/ConversationList";
 import { useAbrirConversa } from "@/components/inbox/NovaConversa";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { usePermission } from "@/hooks/auth/AuthProvider";
 import { useT } from "@/hooks/i18n/useT";
 import type { ConversationsFilters, useConversationsRealtime } from "@/hooks/inbox/useConversationsRealtime";
@@ -47,76 +46,87 @@ export function ListaDeAtendimentos(props: Props) {
   ];
 
   return (
-    <div className="flex h-full min-h-0 flex-col">
-      <div className="flex items-center gap-1 border-b border-border px-2 pt-2" role="tablist" aria-label={t("Atendimentos")}>
-        {abas.map((a) => {
-          const ativa = props.aba === a.id;
-          return (
-            <button
-              key={a.id}
-              type="button"
-              role="tab"
-              aria-selected={ativa}
-              onClick={() => props.onAba(a.id)}
-              className={cn(
-                "-mb-px flex min-h-10 items-center gap-1.5 border-b-2 px-3 text-sm transition-colors",
-                ativa
-                  ? "border-accent font-semibold text-text"
-                  : "border-transparent text-text-muted hover:text-text",
-              )}
-            >
-              {a.rotulo}
-              {a.n !== null && a.n > 0 && (
-                <span
-                  className={cn(
-                    "min-w-5 rounded-full px-1.5 text-center text-xs font-semibold tabular-nums",
-                    a.id === "novos" ? "bg-accent text-accent-foreground" : "bg-surface-elevated text-text-muted",
-                  )}
-                >
-                  {a.n > 999 ? "999+" : a.n}
-                </span>
-              )}
-            </button>
-          );
-        })}
-        <div className="ml-auto pb-1">
-          <AlternarModo para="completo" />
+    <div
+      className={cn(
+        "flex h-full min-h-0 flex-col",
+        // O item selecionado do `ConversationListItem` (upstream) usa `bg-accent-50`,
+        // uma parada CLARA fixa que não muda com o tema: no escuro o nome e a prévia,
+        // em texto claro, sumiam. `accent-soft` é o tingido que a régua de contraste
+        // da marca calcula para cada tema. `!` porque o upstream também fixa o hover.
+        "[&_[aria-current=true]]:bg-accent-soft!",
+        // Na mesa tudo é WhatsApp: o selo do canal no avatar só competia com a bolinha de status.
+        "[&_[data-conversation-id]>div>[role=img]]:hidden",
+      )}
+    >
+      <div className="border-b border-border">
+        <div className="flex items-center gap-1 px-2" role="tablist" aria-label={t("Atendimentos")}>
+          {abas.map((a) => {
+            const ativa = props.aba === a.id;
+            return (
+              <button
+                key={a.id}
+                type="button"
+                role="tab"
+                aria-selected={ativa}
+                onClick={() => props.onAba(a.id)}
+                className={cn(
+                  "flex min-h-11 shrink-0 items-center gap-1.5 border-b-2 px-3 text-sm transition-colors",
+                  ativa
+                    ? "border-accent font-semibold text-text"
+                    : "border-transparent text-text-muted hover:text-text",
+                )}
+              >
+                {a.rotulo}
+                {a.n !== null && a.n > 0 && (
+                  <span
+                    className={cn(
+                      "min-w-5 rounded-full px-1.5 text-center text-xs font-semibold tabular-nums",
+                      a.id === "novos" ? "bg-accent text-accent-foreground" : "bg-surface-elevated text-text-muted",
+                    )}
+                  >
+                    {a.n > 999 ? "999+" : a.n}
+                  </span>
+                )}
+              </button>
+            );
+          })}
         </div>
-      </div>
 
-      <div className="flex items-center gap-2 border-b border-border px-3 py-2">
-        <div className="flex shrink-0 rounded-md border border-border p-0.5" role="group" aria-label={t("Filtro")}>
-          {[
-            { v: false, rotulo: t("Todas") },
-            { v: true, rotulo: t("Não lidas") },
-          ].map((f) => (
-            <button
-              key={String(f.v)}
-              type="button"
-              aria-pressed={props.somenteNaoLidas === f.v}
-              onClick={() => props.onSomenteNaoLidas(f.v)}
-              className={cn(
-                "min-h-8 rounded-sm px-2.5 text-xs transition-colors",
-                props.somenteNaoLidas === f.v
-                  ? "bg-accent-soft font-medium text-text"
-                  : "text-text-muted hover:text-text",
-              )}
-            >
-              {f.rotulo}
-            </button>
-          ))}
+        <div className="flex items-center gap-2 px-3 pb-3 pt-2.5">
+          <div className="flex shrink-0 rounded-md bg-surface-elevated p-0.5" role="group" aria-label={t("Filtro")}>
+            {[
+              { v: false, rotulo: t("Todas") },
+              { v: true, rotulo: t("Não lidas") },
+            ].map((f) => (
+              <button
+                key={String(f.v)}
+                type="button"
+                aria-pressed={props.somenteNaoLidas === f.v}
+                onClick={() => props.onSomenteNaoLidas(f.v)}
+                className={cn(
+                  "min-h-8 rounded-sm px-2.5 text-xs transition-colors",
+                  props.somenteNaoLidas === f.v
+                    ? "bg-accent-soft font-medium text-text"
+                    : "text-text-muted hover:text-text",
+                )}
+              >
+                {f.rotulo}
+              </button>
+            ))}
+          </div>
+          <label className="flex min-h-9 min-w-0 flex-1 items-center gap-1.5 rounded-md border border-border px-2 focus-within:ring-2 focus-within:ring-accent">
+            <MagnifyingGlass size={14} className="shrink-0 text-text-subtle" aria-hidden />
+            <input
+              type="search"
+              value={props.busca}
+              onChange={(e) => props.onBusca(e.target.value)}
+              placeholder={t("Buscar…")}
+              aria-label={t("Buscar nome ou telefone")}
+              className="min-h-8 w-full min-w-0 bg-transparent text-sm outline-hidden placeholder:text-text-muted"
+            />
+          </label>
+          <AlternarModo para="completo" compacto />
         </div>
-        <label className="flex min-w-0 flex-1 items-center gap-1.5 rounded-md border border-border px-2 focus-within:ring-2 focus-within:ring-accent">
-          <MagnifyingGlass size={14} className="shrink-0 text-text-muted" aria-hidden />
-          <input
-            type="search"
-            value={props.busca}
-            onChange={(e) => props.onBusca(e.target.value)}
-            placeholder={t("Buscar nome ou telefone")}
-            aria-label={t("Buscar nome ou telefone")}
-            className="min-h-8 w-full min-w-0 bg-transparent text-sm outline-hidden placeholder:text-text-muted"
-          />
-        </label>
       </div>
 
       <div className="min-h-0 flex-1 overflow-hidden">
@@ -158,20 +168,21 @@ function ConversarPeloNumero() {
   };
 
   return (
-    <form onSubmit={enviar} className="flex items-center gap-2 border-t border-border bg-background p-3">
-      <span className="inline-flex h-9 shrink-0 items-center rounded-md border border-border px-2 text-sm tabular-nums text-text-muted">
-        +55
-      </span>
-      <Input
-        type="tel"
-        inputMode="tel"
-        autoComplete="off"
-        placeholder="(92) 99999-9999"
-        aria-label={t("Telefone com DDD")}
-        value={numero}
-        onChange={(e) => setNumero(e.target.value)}
-        className="h-9 min-w-0"
-      />
+    <form onSubmit={enviar} className="flex items-center gap-2 border-t border-border px-3 py-3">
+      {/* O +55 é prefixo do campo, não uma caixa a mais: uma borda só. */}
+      <label className="flex h-9 min-w-0 flex-1 items-center gap-1.5 rounded-md border border-border px-2 focus-within:ring-2 focus-within:ring-accent">
+        <span className="shrink-0 text-sm tabular-nums text-text-muted">+55</span>
+        <input
+          type="tel"
+          inputMode="tel"
+          autoComplete="off"
+          placeholder="(92) 99999-9999"
+          aria-label={t("Telefone com DDD")}
+          value={numero}
+          onChange={(e) => setNumero(e.target.value)}
+          className="h-full w-full min-w-0 bg-transparent text-sm tabular-nums outline-hidden placeholder:text-text-muted"
+        />
+      </label>
       <Button type="submit" size="sm" variant="outline" className="h-9 shrink-0" disabled={abrindo}>
         {abrindo ? t("Abrindo…") : t("Conversar")}
       </Button>

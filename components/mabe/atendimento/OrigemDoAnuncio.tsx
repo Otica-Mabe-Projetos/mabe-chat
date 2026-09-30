@@ -91,19 +91,33 @@ export function FaixaDoAnuncio({ contactId }: { contactId: string | null }) {
   );
 }
 
-/** Cartão do painel do cliente: sempre aparece, e diz quando a origem não foi capturada. */
+/** O próprio canal não diz nada a quem atende: toda conversa aqui é WhatsApp. */
+const ORIGENS_GENERICAS = new Set(["whatsapp", "waha", "unknown"]);
+
+/**
+ * Seção "De onde veio" do painel do cliente. Só aparece com dado útil: anúncio
+ * vira cartão com título; origem não genérica (site, instagram…) vira uma linha
+ * discreta; o resto (carregando, "whatsapp", não capturada) não ocupa espaço.
+ */
 export function CartaoDeOrigem({ contactId }: { contactId: string | null }) {
   const t = useT();
   const o = useOrigem(contactId);
-  if (!o) return <p className="text-sm text-text-muted">{t("Carregando…")}</p>;
+  if (!o) return null;
   if (!o.veioDeAnuncio) {
+    const origem = o.origem.origem?.trim();
+    if (!origem || ORIGENS_GENERICAS.has(origem.toLowerCase())) return null;
     return (
-      <p className="text-sm text-text-muted">
-        {o.origem.origem ? `${t("Origem")}: ${o.origem.origem}` : t("Origem não capturada")}
+      <p className="text-xs text-text-muted">
+        {t("Origem")}: <span className="text-text">{origem}</span>
       </p>
     );
   }
-  return <DetalhesDoAnuncio o={o} />;
+  return (
+    <section>
+      <h3 className="mb-2 text-xs font-medium text-text-muted">{t("De onde veio")}</h3>
+      <DetalhesDoAnuncio o={o} />
+    </section>
+  );
 }
 
 function DetalhesDoAnuncio({ o, className }: { o: Origem; className?: string }) {

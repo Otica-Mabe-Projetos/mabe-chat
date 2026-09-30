@@ -21,7 +21,6 @@ import { colunasDoCelular } from "@/components/inbox/InboxLayout";
 import { JanelaFechadaAviso } from "@/components/inbox/JanelaFechadaAviso";
 import { NumeroForaDoAr } from "@/components/inbox/NumeroForaDoAr";
 import { ReassignDialog } from "@/components/inbox/ReassignDialog";
-import { SnoozeButton } from "@/components/inbox/SnoozeButton";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { useAutomaticoAtivo } from "@/hooks/ai/useAutomaticoAtivo";
@@ -198,7 +197,15 @@ export function Atendimento({ initialSelectedId = null }: { initialSelectedId?: 
 
   return (
     <OpenConversationProvider conversationId={selectedId}>
-      <div className="grid h-[calc(100dvh-3.5rem-var(--space-6)-max(var(--space-6),var(--rodape-ocupado,0px)))] w-full grid-cols-1 overflow-hidden rounded-lg border border-border bg-background md:grid-cols-[320px_1fr] xl:grid-cols-[340px_1fr_320px]">
+      {/*
+        De ponta a ponta: as margens negativas desfazem o `p-6` do <main> do
+        AppShell (e o rodapé reservado, quando há peça fixa embaixo), então a
+        altura é a janela menos a TopBar (h-14) menos o que o rodapé ocupa —
+        exatamente a caixa de conteúdo do <main>, sem gerar rolagem na página.
+        Colunas laterais mais estreitas no xl (como o InboxLayout oficial): a
+        conversa é a coluna que mais importa e era a mais espremida em 1280px.
+      */}
+      <div className="mx-[calc(-1*var(--space-6))] mt-[calc(-1*var(--space-6))] mb-[calc(var(--rodape-ocupado,0px)_-_max(var(--space-6),var(--rodape-ocupado,0px)))] grid h-[calc(100dvh-3.5rem-var(--rodape-ocupado,0px))] grid-cols-1 overflow-hidden bg-background md:grid-cols-[320px_minmax(0,1fr)] xl:grid-cols-[300px_minmax(0,1fr)_296px] 2xl:grid-cols-[340px_minmax(0,1fr)_320px]">
         <div className={cn("h-full min-h-0 flex-col border-r border-border md:flex", colunas.lista)}>
           <ListaDeAtendimentos
             aba={aba}
@@ -224,9 +231,18 @@ export function Atendimento({ initialSelectedId = null }: { initialSelectedId?: 
                 agora={agora}
                 onVoltar={() => handleSelect(null)}
                 onAbrirPainel={() => setPainelAberto(true)}
+                {...(eMinha && !encerrada && !somenteLeitura
+                  ? { onTransferir: () => setTransferindo(true), onConcluir: () => setConcluindo(true) }
+                  : {})}
               />
               <FaixaDoAnuncio contactId={conversa.contact_id} />
-              <div className="min-h-0 flex-1 overflow-hidden">
+              {/*
+                Sem rolagem horizontal: o player de áudio oficial tem largura fixa
+                (w-60) e, numa bolha limitada a 75% de uma coluna estreita, vazava
+                pela direita. Aqui ele passa a caber na bolha (sem cortar nada), e
+                o rolador da conversa fica só vertical e fino.
+              */}
+              <div className="min-h-0 flex-1 overflow-hidden [&>div>.overflow-y-auto]:overflow-x-hidden [&>div>.overflow-y-auto]:[scrollbar-width:thin] [&_[data-testid=message-bubble]_.w-60]:w-auto [&_[data-testid=message-bubble]_.w-60]:max-w-60">
                 <ChatThread
                   conversationId={conversa.id}
                   provider={provider}
@@ -291,21 +307,9 @@ export function Atendimento({ initialSelectedId = null }: { initialSelectedId?: 
                   {motivoDaJanela && (
                     <JanelaFechadaAviso conversationId={conversa.id} provider={provider} motivo={motivoDaJanela} />
                   )}
-                  <div className="flex flex-wrap items-center justify-end gap-2 border-t border-border bg-background px-3 py-2">
-                    <span className="mr-auto inline-flex items-center gap-1.5 text-xs text-text-muted">
-                      <ChatCircle size={14} aria-hidden />
-                      {t("Você está atendendo")}
-                    </span>
-                    <SnoozeButton conversationId={conversa.id} snoozeUntil={conversa.snooze_until ?? null} />
-                    <Button variant="outline" size="sm" onClick={() => setTransferindo(true)}>
-                      <ArrowRight size={16} aria-hidden />
-                      {t("Transferir")}
-                    </Button>
-                    <Button size="sm" onClick={() => setConcluindo(true)}>
-                      <CheckCircle size={16} aria-hidden />
-                      {t("Concluir")}
-                    </Button>
-                  </div>
+                  {/* Lembrar, Transferir e Concluir moram no cabeçalho; aqui só se
+                      escreve. Duas linhas de altura útil sem rolagem interna. */}
+                  <div className="[&_textarea]:min-h-14">
                   <Composer
                     key={conversa.id}
                     conversationId={conversa.id}
@@ -317,6 +321,7 @@ export function Atendimento({ initialSelectedId = null }: { initialSelectedId?: 
                     currentContactId={conversa.contact_id}
                     semAssistencia
                   />
+                  </div>
                 </>
               ) : (
                 <Aviso

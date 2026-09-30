@@ -83,7 +83,8 @@ const COR_DO_COMANDO: Record<string, string> = {
 function initials(name: string | null | undefined, fallback: string): string {
   const v = (name ?? "").trim();
   if (!v) return fallback.slice(0, 2).toUpperCase();
-  const parts = v.split(/\s+/).filter(Boolean);
+  // Personalização Ótica Mabe: ignora pedaço sem letra ("(Suporte)" não vira "(").
+  const parts = v.split(/\s+/).map((p) => p.replace(/^[^\p{L}\p{N}]+/u, "")).filter(Boolean);
   if (parts.length === 0) return fallback.slice(0, 2).toUpperCase();
   if (parts.length === 1) return (parts[0] ?? "").slice(0, 2).toUpperCase();
   const first = parts[0]?.[0] ?? "";

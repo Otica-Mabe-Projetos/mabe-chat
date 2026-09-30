@@ -34,6 +34,7 @@ DB="${ATUALIZADOR_DB:-supabase-db}"
 PAUSAR_SUPABASE="${ATUALIZADOR_PAUSAR_SUPABASE:-supabase-rest supabase-studio realtime-dev.supabase-realtime}"
 APP_URL="${ATUALIZADOR_APP_URL:-http://app:3000}"
 REPO="${ATUALIZADOR_REPO:-melgarafael/DeskcommCRM}"
+REPO_MABE="${ATUALIZADOR_REPO_MABE:-Otica-Mabe-Projetos/mabe-chat}"  # onde mora o SQL das personalizações
 BACKUPS="${ATUALIZADOR_BACKUPS:-/backups}"
 FONTES="${ATUALIZADOR_FONTES:-/fontes}"
 RETER="${ATUALIZADOR_RETER:-14}"
@@ -297,6 +298,38 @@ conferir_regras() {  # conferir_regras <baseline> — porta da conferência do u
   log "banco: regras de isolamento conferidas ($(grep -c . <<<"$esperadas") declaradas, todas no lugar)"
 }
 
+SQL_MABE="/tmp/mabe-lojas.sql"
+
+baixar_sql_mabe() {  # antes de parar qualquer coisa: sem o SQL da Mabe, não há atualização
+  curl -fsS --max-time 60 "https://raw.githubusercontent.com/$REPO_MABE/personalizacoes/supabase/mabe/lojas.sql" -o "$SQL_MABE" \
+    && grep -q "mabe_loja_restringe" "$SQL_MABE"
+}
+
+aplicar_sql_mabe() {  # o SQL das personalizações (trava por loja), DEPOIS do baseline oficial
+  # Numa transação só (-1): ou entra inteiro, ou nada muda (a versão anterior segue).
+  local saida adm
+  if ! saida="$(docker exec -i "$DB" psql -U postgres -d postgres -1 -q -v ON_ERROR_STOP=1 -f - < "$SQL_MABE" 2>&1)"; then
+    log "banco: ⛔ o SQL da Mabe (trava por loja) falhou — a versão anterior dele segue no banco:"
+    head -n 5 <<<"$saida" | while IFS= read -r l; do log "  $l"; done
+    return 1
+  fi
+  # Prova rápida: um admin real lê conversas como authenticated (a trava não pode derrubar o Inbox).
+  adm="$(docker exec "$DB" psql -U postgres -d postgres -tAc "select user_id from public.user_organizations where role = 'admin' and revoked_at is null limit 1" 2>/dev/null)"
+  if [ -n "$adm" ] && ! docker exec -i "$DB" psql -U postgres -d postgres -q -v ON_ERROR_STOP=1 >/dev/null 2>&1 <<SQL
+begin;
+set local role authenticated;
+select set_config('request.jwt.claims', json_build_object('sub', '$adm', 'role', 'authenticated')::text, true);
+select count(*) from public.conversations;
+select count(*) from public.event_log;
+rollback;
+SQL
+  then
+    log "banco: ⛔ depois do SQL da Mabe, a leitura de conversas como usuário FALHOU — confira já (docs/PERSONALIZACOES-MABE-CHAT.md)"
+    return 1
+  fi
+  log "banco: SQL da Mabe aplicado e conferido (trava por loja)"
+}
+
 # --------------------------------------------------------------- imagens ---
 
 puxar_imagens() {  # baixa as 3 imagens ANTES de parar qualquer coisa
@@ -370,6 +403,9 @@ atualizar() {  # atualizar <vX.Y.Z> [run_id]
   if ! puxar_imagens "$alvo"; then
     log "código: não consegui baixar as imagens de $alvo — nada foi alterado"; resultado failed; return 1
   fi
+  if ! baixar_sql_mabe; then
+    log "banco: não consegui baixar o SQL da Mabe (trava por loja) — nada foi alterado"; resultado failed; return 1
+  fi
   if ! curl -fsS --max-time 180 "https://raw.githubusercontent.com/$REPO/$alvo/supabase/baseline.sql" -o "$base" \
      || [ "$(wc -c < "$base")" -lt 100000 ]; then
     log "banco: não consegui baixar o baseline.sql de $alvo — nada foi alterado"; resultado failed; return 1
@@ -385,6 +421,7 @@ atualizar() {  # atualizar <vX.Y.Z> [run_id]
     resultado failed_rolled_back
     return 1
   fi
+  aplicar_sql_mabe || log "banco: ⚠ atualização segue, mas a trava por loja precisa de atenção (comando: sql-mabe)"
   religar_supabase
 
   if trocar_para "$alvo" && subir && saudavel; then
@@ -427,8 +464,9 @@ case "${1:-loop}" in
   loop) loop ;;
   heartbeat) heartbeat ;;
   backup) backup "${2:-manual}" ;;
+  sql-mabe) baixar_sql_mabe && aplicar_sql_mabe ;;  # aplica/reaplica só a trava por loja
   atualizar)
     if [ -z "${2:-}" ]; then echo "uso: atualizar vX.Y.Z" >&2; exit 2; fi
     atualizar "$2" "${3:-}" ;;
-  *) echo "uso: $0 [loop|heartbeat|backup [motivo]|atualizar vX.Y.Z]" >&2; exit 2 ;;
+  *) echo "uso: $0 [loop|heartbeat|backup [motivo]|sql-mabe|atualizar vX.Y.Z]" >&2; exit 2 ;;
 esac

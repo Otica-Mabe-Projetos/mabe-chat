@@ -16,6 +16,10 @@ app é montada por nós, a cada versão oficial nova.
 | Contatos, ficha do contato | **Iniciar conversa no Inbox**, quando o contato tem telefone e ainda não tem conversa. |
 | Inbox (`/app/inbox`), para quem é atendente | **Mesa do atendente**: abas Novos/Meus/Outros, "Iniciar atendimento" antes de responder (espiar não marca como lida), Transferir, Concluir com motivo (etiqueta `motivo: …` + nota interna), origem do anúncio, painel do cliente e "+55 Conversar". Botões "Modo atendente / Modo completo" alternam. Pesquisa e decisões: [PESQUISA-TELA-ATENDIMENTO-2026-09-30.md](PESQUISA-TELA-ATENDIMENTO-2026-09-30.md) |
 | Configurações › **Visual Mabe** (só admin) | **Um interruptor** liga tudo da Mabe na hora (salva sozinho). Desligado = o sistema como vem da versão oficial. Ajustes opcionais embaixo: cores, **tom** (dourado/amarelo/preto), **logo da Ótica Mabe** no menu, mesa do atendente, se o atendente pode trocar para o Inbox completo e motivos de conclusão. "Restaurar padrão da Mabe" volta tudo ao de fábrica. |
+| Configurações › **Lojas** (só admin) | As lojas (L01–L15, L99, BASE; criar, renomear, desativar), **de qual loja é cada número** (o número passa a se chamar "L15 · Manaus Centro" no sistema inteiro; loja com 2 números ganha o final do telefone) e **quem atende cada loja**, com a **restrição por loja** (liga/desliga). |
+| Equipe › menu do membro › **Lojas que atende** | Marca as lojas da pessoa ou "Todas as lojas" (supervisão). Admin sempre vê tudo. |
+| **Lojas** (menu Atendimento, gerente e admin) | Painel de supervisão: um cartão por loja com Novos → Em atendimento → Esperando → Concluídos hoje; ao clicar, quem está atendendo, quem espera há mais tempo e os motivos do dia. Atualiza sozinho a cada 30 s. |
+| Mesa do atendente | Filtro **Loja**; "Conversar" e "Iniciar conversa" saem pelo número da loja escolhida. |
 
 Regras que valem nessas telas:
 
@@ -84,6 +88,25 @@ npx eslint <arquivos>
 
 O teste `tests/unit/i18n-espanhol-cobre-a-tela.test.ts` reprova as frases novas sem
 espanhol. É esperado: o teste não roda na montagem, e a tela usa o português.
+
+## Restrição por loja (como funciona e cuidados)
+
+- Com a restrição **ligada**, quem não é admin nem "Todas as lojas" só vê as conversas dos números das
+  suas lojas. **Sem loja marcada = não vê nenhuma conversa.** Gerentes também seguem as lojas marcadas.
+- A trava mora **no banco** (`supabase/mabe/lojas.sql`, na branch `personalizacoes`): políticas
+  RESTRICTIVE nossas em `conversations` (mensagens herdam), `event_log`, `webhook_events_log` e
+  `agent_cases`, mais um gatilho que recusa assumir/transferir conversa de outra loja. Não mexe em regra
+  oficial; o baseline oficial não a apaga.
+- O **atualizador reaplica** esse SQL depois do baseline de cada versão, numa transação só, e confere
+  que um admin continua lendo as conversas. Para reaplicar à mão:
+  `docker exec infraestrutua_mabe-chat-app-atualizador-1 bash /usr/local/bin/atualizador.sh sql-mabe`.
+- Com a restrição ligada, os **Responsáveis por número** (distribuição automática) passam a ser as
+  pessoas de cada loja; ao desligar, voltam ao padrão.
+- **Fora da trava** (continuam da empresa inteira): Contatos, Funis/negócios, memória da IA sobre o
+  contato e Propostas. O mesmo cliente pode falar com duas lojas.
+- ⚠️ **Notificações push**: se um dia as chaves `VAPID_*` forem preenchidas, o push oficial manda o
+  texto de toda mensagem para todos os aparelhos da empresa, ignorando a loja. Antes de ligar push,
+  ajustar `lib/notifications/push.handler.ts` para filtrar por loja.
 
 ## Pontos de atenção
 

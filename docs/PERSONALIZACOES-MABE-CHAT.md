@@ -15,7 +15,7 @@ app é montada por nós, a cada versão oficial nova.
 | Funis, ficha do negócio | **Iniciar conversa no Inbox**, quando o negócio tem telefone e ainda não tem conversa. |
 | Contatos, ficha do contato | **Iniciar conversa no Inbox**, quando o contato tem telefone e ainda não tem conversa. |
 | Inbox (`/app/inbox`), para quem é atendente | **Mesa do atendente**: abas Novos/Meus/Outros, "Iniciar atendimento" antes de responder (espiar não marca como lida), Transferir, Concluir com motivo (etiqueta `motivo: …` + nota interna), origem do anúncio, painel do cliente e "+55 Conversar". Botões "Modo atendente / Modo completo" alternam. Pesquisa e decisões: [PESQUISA-TELA-ATENDIMENTO-2026-09-30.md](PESQUISA-TELA-ATENDIMENTO-2026-09-30.md) |
-| Configurações › **Visual Mabe** (só admin) | O "mod" da Mabe num lugar só: **Cores da Mabe** (dourado; desligado = visual original), **Mesa do atendente** (desligada = Inbox completo para todos), **Atendente pode trocar para o Inbox completo** e **Motivos de conclusão** (um por linha). "Restaurar padrão da Mabe" volta tudo ao de fábrica. |
+| Configurações › **Visual Mabe** (só admin) | **Um interruptor** liga tudo da Mabe na hora (salva sozinho). Desligado = o sistema como vem da versão oficial. Ajustes opcionais embaixo: cores, **tom** (dourado/amarelo/preto), **logo da Ótica Mabe** no menu, mesa do atendente, se o atendente pode trocar para o Inbox completo e motivos de conclusão. "Restaurar padrão da Mabe" volta tudo ao de fábrica. |
 
 Regras que valem nessas telas:
 

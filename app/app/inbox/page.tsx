@@ -9,6 +9,7 @@ import { lerRascunho, type AvisoDeRascunho } from "@/lib/inbox/rascunho-sugerido
 import { cookies } from "next/headers";
 import { Atendimento } from "@/components/mabe/atendimento/Atendimento";
 import { COOKIE_DO_MODO, modoDoInbox } from "@/components/mabe/atendimento/modo";
+import { COOKIE_DO_VISUAL, visualMabeLigado } from "@/components/mabe/visual/visual";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Inbox" };
@@ -42,8 +43,13 @@ export default async function InboxPage({
     );
   }
   const { id, rascunho } = await searchParams;
-  // Personalização Ótica Mabe: mesa do atendente (components/mabe/atendimento).
-  if (modoDoInbox((await cookies()).get(COOKIE_DO_MODO)?.value, activeOrg.role) === "atendente") {
+  // Personalização Ótica Mabe: mesa do atendente (components/mabe/atendimento), só com o
+  // "Visual Mabe" ligado (components/mabe/visual).
+  const jar = await cookies();
+  if (
+    visualMabeLigado(jar.get(COOKIE_DO_VISUAL)?.value) &&
+    modoDoInbox(jar.get(COOKIE_DO_MODO)?.value, activeOrg.role) === "atendente"
+  ) {
     return <Atendimento initialSelectedId={id ?? null} />;
   }
   // ?rascunho= é a ponta da caixa de entrada da issue #1611: o texto mora no

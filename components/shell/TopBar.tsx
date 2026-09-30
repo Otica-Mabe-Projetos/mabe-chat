@@ -5,6 +5,7 @@ import { MobileSidebar } from "./MobileSidebar";
 import { TenantSwitcher } from "./TenantSwitcher";
 import { UserMenu } from "./UserMenu";
 import { SearchTrigger } from "./SearchTrigger";
+import { AlternarVisualMabe } from "@/components/mabe/visual/AlternarVisualMabe";
 
 export function TopBar() {
   return (
@@ -17,6 +18,8 @@ export function TopBar() {
         <SearchTrigger />
       </div>
       <div className="flex shrink-0 items-center gap-2">
+        {/* Personalização Ótica Mabe: liga/desliga o "Visual Mabe" (components/mabe/visual). */}
+        <AlternarVisualMabe />
         <AlertsBell />
         <AvisoDePropostaEmDestaque />
         <UserMenu />

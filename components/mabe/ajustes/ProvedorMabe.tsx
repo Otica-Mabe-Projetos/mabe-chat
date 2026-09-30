@@ -9,6 +9,8 @@ export type ContextoMabe = {
   motivos: string[];
   /** Números (channel_session_id) que a pessoa enxerga pela restrição por loja; `null` = todos. */
   numerosPermitidos?: string[] | null;
+  /** Ordem da lista da mesa (Configurações › Visual Mabe). */
+  ordemDaLista?: "recentes" | "espera";
 };
 
 const Contexto = createContext<ContextoMabe>({ podeTrocarModo: false, motivos: PADRAO.motivos, numerosPermitidos: null });

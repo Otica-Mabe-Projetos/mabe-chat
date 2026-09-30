@@ -71,7 +71,7 @@ export function Atendimento({ initialSelectedId = null }: { initialSelectedId?: 
   const aba = lerAba(searchParams.get("aba"));
   const idNaUrl = searchParams.get("id");
   // Filtro de loja = um número (channel_session_id) na URL, para sobreviver ao recarregar.
-  const { numerosPermitidos } = useMabe();
+  const { numerosPermitidos, ordemDaLista } = useMabe();
   const numeroNaUrl = searchParams.get("numero");
   const numero =
     numeroNaUrl && /^[0-9a-f-]{36}$/i.test(numeroNaUrl) && numeroPermitido(numerosPermitidos, numeroNaUrl)
@@ -141,8 +141,10 @@ export function Atendimento({ initialSelectedId = null }: { initialSelectedId?: 
       search: buscaValeConsulta(busca) ? busca : undefined,
       unread: somenteNaoLidas || undefined,
       channel_session_id: numero ?? undefined,
+      // Mais novas no topo (padrão da Mabe), inclusive em Novos.
+      ordem: ordemDaLista === "espera" ? undefined : ("recentes" as const),
     }),
-    [aba, automaticoDaOrg, busca, somenteNaoLidas, numero],
+    [aba, automaticoDaOrg, busca, somenteNaoLidas, numero, ordemDaLista],
   );
   const listQ = useConversationsRealtime(filters, orgId);
   const listaDaAba = useMemo(() => {

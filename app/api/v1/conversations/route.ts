@@ -49,6 +49,8 @@ export async function GET(req: NextRequest): Promise<Response> {
     // Agora `tests/unit/rota-le-todo-filtro-do-schema.test.ts` reprova o próximo
     // esquecimento, em vez de este comentário pedir atenção.
     comando: url.searchParams.get("comando") ?? undefined,
+    // Personalização Ótica Mabe: ordem da lista (mais novas no topo).
+    ordem: url.searchParams.get("ordem") ?? undefined,
     // O `tag` era o único param que o schema aceitava, o hook serializava e o
     // handler implementava — e que esta linha não lia. A cadeia rompia AQUI, no
     // meio: `InboxFilters` mostra o select "Filtrar por tag" sempre que a org tem

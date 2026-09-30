@@ -194,6 +194,32 @@ export function FormularioVisualMabe({ gravado }: { gravado: AjustesMabe }) {
               ))}
             </div>
           </div>
+          <div className="flex flex-wrap items-center justify-between gap-4 py-3">
+            <div className="space-y-0.5">
+              <p className="text-sm font-medium">{t("Ordem das conversas")}</p>
+              <p className="text-sm text-muted-foreground">
+                {t("Na mesa, inclusive em Novos. Com \"Mais recentes no topo\", quem manda mensagem nova sobe para cima, como no WhatsApp.")}
+              </p>
+            </div>
+            <div role="radiogroup" aria-label={t("Ordem das conversas")} className="flex flex-wrap gap-2">
+              {(["recentes", "espera"] as const).map((ordem) => (
+                <button
+                  key={ordem}
+                  type="button"
+                  role="radio"
+                  aria-checked={ajustes.ordem_lista === ordem}
+                  disabled={!ajustes.mesa}
+                  onClick={() => mudar("ordem_lista", ordem)}
+                  className={cn(
+                    "min-h-10 rounded-md border px-3 text-sm transition-colors disabled:opacity-50",
+                    ajustes.ordem_lista === ordem ? "border-accent bg-accent-soft font-medium" : "hover:bg-surface-elevated",
+                  )}
+                >
+                  {ordem === "recentes" ? t("Mais recentes no topo") : t("Quem espera há mais tempo")}
+                </button>
+              ))}
+            </div>
+          </div>
           <Opcao
             id="mabe-troca"
             titulo={t("Atendente pode trocar para o Inbox completo")}

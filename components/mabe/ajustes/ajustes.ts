@@ -27,6 +27,8 @@ export const ajustesMabeSchema = z.object({
   mesa: z.boolean(),
   /** Quem abre o Inbox já na mesa: só quem é `agent`, ou todo mundo (admin e gerente trocam pelo botão). */
   mesa_para: z.enum(["atendentes", "todos"]),
+  /** Ordem das conversas na mesa: mais novas no topo (padrão) ou quem espera há mais tempo primeiro. */
+  ordem_lista: z.enum(["recentes", "espera"]),
   /** Atendente pode trocar sozinho para o Inbox completo (botão "Modo completo"). */
   atendente_troca: z.boolean(),
   /** Opções do "Concluir atendimento". Cada uma vira a etiqueta `motivo: …`. */
@@ -42,6 +44,7 @@ export const PADRAO: AjustesMabe = {
   logo: true,
   mesa: true,
   mesa_para: "todos",
+  ordem_lista: "recentes",
   atendente_troca: true,
   motivos: [...MOTIVOS_DE_CONCLUSAO],
 };
@@ -60,6 +63,7 @@ export function ajustesMabeDeSettings(settings: unknown): AjustesMabe {
     logo: campo("logo"),
     mesa: campo("mesa"),
     mesa_para: campo("mesa_para"),
+    ordem_lista: campo("ordem_lista"),
     atendente_troca: campo("atendente_troca"),
     motivos: campo("motivos"),
   };

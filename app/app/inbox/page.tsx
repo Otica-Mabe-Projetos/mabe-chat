@@ -53,6 +53,7 @@ export default async function InboxPage({
   const contextoMabe = {
     podeTrocarModo: podeTrocarModo(activeOrg.role, mabe),
     motivos: mabe.motivos,
+    ordemDaLista: mabe.ordem_lista,
     numerosPermitidos: numerosVisiveis(await lerLojas(activeOrg.orgId), user.id, activeOrg.role),
   };
   // ?numero= é o filtro de loja, que só existe na mesa: o link do painel de Lojas abre a mesa.

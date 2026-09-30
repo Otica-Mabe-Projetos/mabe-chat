@@ -374,6 +374,8 @@ export const listConversationsQuerySchema = z.object({
    * `.eq("is_group", …)` no handler.
    */
   is_group: z.enum(["true", "false"]).optional(),
+  // Personalização Ótica Mabe: "recentes" = mais novas no topo também na fila (ver `ehAFila`).
+  ordem: z.enum(["recentes"]).optional(),
   /**
    * Só as que têm mensagem não lida para o dono.
    *

@@ -410,7 +410,11 @@ export function comandosDaFila(automaticoDaOrg?: boolean): ComandoDoBanco[] {
 export function ehAFila(f: {
   comando?: readonly string[] | null;
   assigned_to?: string | null;
+  ordem?: string | null;
 }): boolean {
+  // Personalização Ótica Mabe: `ordem=recentes` (Configurações › Visual Mabe) lista a
+  // fila pela última mensagem, as mais novas no topo, como as demais abas.
+  if (f.ordem === "recentes") return false;
   return f.comando?.includes("aguardando") ?? f.assigned_to === "unassigned";
 }
 

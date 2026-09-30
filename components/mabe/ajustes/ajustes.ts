@@ -25,6 +25,8 @@ export const ajustesMabeSchema = z.object({
   logo: z.boolean(),
   /** Mesa do atendente no Inbox para quem é `agent`. Desligado = Inbox oficial para todos. */
   mesa: z.boolean(),
+  /** Quem abre o Inbox já na mesa: só quem é `agent`, ou todo mundo (admin e gerente trocam pelo botão). */
+  mesa_para: z.enum(["atendentes", "todos"]),
   /** Atendente pode trocar sozinho para o Inbox completo (botão "Modo completo"). */
   atendente_troca: z.boolean(),
   /** Opções do "Concluir atendimento". Cada uma vira a etiqueta `motivo: …`. */
@@ -39,6 +41,7 @@ export const PADRAO: AjustesMabe = {
   tom: "dourado",
   logo: true,
   mesa: true,
+  mesa_para: "todos",
   atendente_troca: true,
   motivos: [...MOTIVOS_DE_CONCLUSAO],
 };
@@ -56,6 +59,7 @@ export function ajustesMabeDeSettings(settings: unknown): AjustesMabe {
     tom: campo("tom"),
     logo: campo("logo"),
     mesa: campo("mesa"),
+    mesa_para: campo("mesa_para"),
     atendente_troca: campo("atendente_troca"),
     motivos: campo("motivos"),
   };

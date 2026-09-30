@@ -22,5 +22,5 @@ export function podeTrocarModo(papel: string, a: Regras): boolean {
 export function modoDoInbox(cookie: string | undefined, papel: string, a: Regras): ModoDoInbox {
   if (!vale(a, "mesa")) return "completo";
   if (podeTrocarModo(papel, a) && (cookie === "atendente" || cookie === "completo")) return cookie;
-  return papel === "agent" ? "atendente" : "completo";
+  return a.mesa_para === "todos" || papel === "agent" ? "atendente" : "completo";
 }

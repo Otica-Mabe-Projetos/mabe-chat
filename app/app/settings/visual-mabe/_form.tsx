@@ -168,6 +168,32 @@ export function FormularioVisualMabe({ gravado }: { gravado: AjustesMabe }) {
             checked={ajustes.mesa}
             onChange={(v) => mudar("mesa", v)}
           />
+          <div className="flex items-center justify-between gap-4 py-3">
+            <div className="space-y-0.5">
+              <p className="text-sm font-medium">{t("Quem abre o Inbox na mesa")}</p>
+              <p className="text-sm text-muted-foreground">
+                {t("Admins e gerentes sempre podem trocar pelo botão \"Modo completo\".")}
+              </p>
+            </div>
+            <div role="radiogroup" aria-label={t("Quem abre o Inbox na mesa")} className="flex gap-2">
+              {(["todos", "atendentes"] as const).map((quem) => (
+                <button
+                  key={quem}
+                  type="button"
+                  role="radio"
+                  aria-checked={ajustes.mesa_para === quem}
+                  disabled={!ajustes.mesa}
+                  onClick={() => mudar("mesa_para", quem)}
+                  className={cn(
+                    "min-h-10 rounded-md border px-3 text-sm transition-colors disabled:opacity-50",
+                    ajustes.mesa_para === quem ? "border-accent bg-accent-soft font-medium" : "hover:bg-surface-elevated",
+                  )}
+                >
+                  {quem === "todos" ? t("Todos") : t("Só atendentes")}
+                </button>
+              ))}
+            </div>
+          </div>
           <Opcao
             id="mabe-troca"
             titulo={t("Atendente pode trocar para o Inbox completo")}

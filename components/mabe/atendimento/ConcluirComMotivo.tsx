@@ -25,7 +25,8 @@ import { useCloseConversation } from "@/hooks/inbox/useCloseConversation";
 import { useUpdateConversationTags } from "@/hooks/inbox/useConversationTags";
 import { useCreateNote } from "@/hooks/inbox/useCreateNote";
 import { cn } from "@/lib/utils";
-import { MOTIVOS_DE_CONCLUSAO, etiquetasComMotivo, type MotivoDeConclusao } from "./motivos";
+import { useMabe } from "@/components/mabe/ajustes/ProvedorMabe";
+import { etiquetasComMotivo } from "./motivos";
 
 interface Props {
   conversationId: string;
@@ -36,7 +37,8 @@ interface Props {
 
 export function ConcluirComMotivo({ conversationId, etiquetas, open, onOpenChange }: Props) {
   const t = useT();
-  const [motivo, setMotivo] = useState<MotivoDeConclusao | null>(null);
+  const { motivos } = useMabe();
+  const [motivo, setMotivo] = useState<string | null>(null);
   const [observacao, setObservacao] = useState("");
   const nota = useCreateNote();
   const tags = useUpdateConversationTags();
@@ -73,7 +75,7 @@ export function ConcluirComMotivo({ conversationId, etiquetas, open, onOpenChang
           <DialogDescription>{t("Como terminou este atendimento?")}</DialogDescription>
         </DialogHeader>
         <div role="radiogroup" aria-label={t("Motivo")} className="grid grid-cols-2 gap-2">
-          {MOTIVOS_DE_CONCLUSAO.map((m) => (
+          {motivos.map((m) => (
             <button
               key={m}
               type="button"

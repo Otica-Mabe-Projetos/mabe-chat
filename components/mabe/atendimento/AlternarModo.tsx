@@ -3,12 +3,16 @@ import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
 import { useT } from "@/hooks/i18n/useT";
+import { useMabe } from "@/components/mabe/ajustes/ProvedorMabe";
 import { COOKIE_DO_MODO, type ModoDoInbox } from "./modo";
 
 /** Troca entre a mesa do atendente e o Inbox completo (vale para esta pessoa, neste navegador). */
 export function AlternarModo({ para }: { para: ModoDoInbox }) {
   const t = useT();
   const router = useRouter();
+  // Some quando Configurações › Visual Mabe não deixa esta pessoa trocar.
+  const { podeTrocarModo } = useMabe();
+  if (!podeTrocarModo) return null;
   return (
     <Button
       variant="ghost"

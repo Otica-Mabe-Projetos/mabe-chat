@@ -8,7 +8,9 @@ import { createClient } from "@/lib/supabase/server";
 import { lerRascunho, type AvisoDeRascunho } from "@/lib/inbox/rascunho-sugerido";
 import { cookies } from "next/headers";
 import { Atendimento } from "@/components/mabe/atendimento/Atendimento";
-import { COOKIE_DO_MODO, modoDoInbox } from "@/components/mabe/atendimento/modo";
+import { COOKIE_DO_MODO, modoDoInbox, podeTrocarModo } from "@/components/mabe/atendimento/modo";
+import { lerAjustesMabe } from "@/components/mabe/ajustes/ler";
+import { ProvedorMabe } from "@/components/mabe/ajustes/ProvedorMabe";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Inbox" };
@@ -42,9 +44,16 @@ export default async function InboxPage({
     );
   }
   const { id, rascunho } = await searchParams;
-  // Personalização Ótica Mabe: mesa do atendente (components/mabe/atendimento).
-  if (modoDoInbox((await cookies()).get(COOKIE_DO_MODO)?.value, activeOrg.role) === "atendente") {
-    return <Atendimento initialSelectedId={id ?? null} />;
+  // Personalização Ótica Mabe: mesa do atendente (components/mabe/atendimento), regida
+  // por Configurações › Visual Mabe (components/mabe/ajustes).
+  const mabe = await lerAjustesMabe(activeOrg.orgId);
+  const contextoMabe = { podeTrocarModo: podeTrocarModo(activeOrg.role, mabe), motivos: mabe.motivos };
+  if (modoDoInbox((await cookies()).get(COOKIE_DO_MODO)?.value, activeOrg.role, mabe) === "atendente") {
+    return (
+      <ProvedorMabe valor={contextoMabe}>
+        <Atendimento initialSelectedId={id ?? null} />
+      </ProvedorMabe>
+    );
   }
   // ?rascunho= é a ponta da caixa de entrada da issue #1611: o texto mora no
   // servidor, e a URL só carrega o ID. Aqui a leitura acontece com a SESSÃO do
@@ -64,5 +73,9 @@ export default async function InboxPage({
       }),
     };
   }
-  return <InboxLayout initialSelectedId={id ?? null} rascunho={avisoDeRascunho} />;
+  return (
+    <ProvedorMabe valor={contextoMabe}>
+      <InboxLayout initialSelectedId={id ?? null} rascunho={avisoDeRascunho} />
+    </ProvedorMabe>
+  );
 }

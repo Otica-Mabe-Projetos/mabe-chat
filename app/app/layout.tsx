@@ -8,6 +8,7 @@ import { AuthProvider } from "@/hooks/auth/AuthProvider";
 import { ProvedorDeCoresDasEtiquetas } from "@/components/tags/CoresDasEtiquetas";
 import { AppShell } from "./_components/AppShell";
 import { EstiloDaMarcaDaOrganizacao } from "./_components/EstiloDaMarcaDaOrganizacao";
+import { EstiloMabe } from "@/components/mabe/visual/EstiloMabe";
 import { MfaEnrollGate } from "@/components/auth/MfaEnrollGate";
 import { cssDaMarca, ESCOPO_DA_ORGANIZACAO } from "@/lib/branding/css";
 import { marcaDaInstalacao } from "@/lib/branding/instalacao";
@@ -252,6 +253,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       */}
       <div data-marca-org="" className="contents">
         <EstiloDaMarcaDaOrganizacao css={cssDaOrganizacao} />
+        {/* Personalização Ótica Mabe: cores do "Visual Mabe" (Configurações › Visual Mabe). */}
+        <EstiloMabe orgId={activeOrg?.orgId} />
         <ImpersonateBanner impersonating={impersonating} />
         <ConexaoCaidaBanner caidas={conexoesCaidas} />
         {needsMfaGate ? (

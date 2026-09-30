@@ -968,6 +968,16 @@ export const NAV_CATALOG = [
     // agrupar o menu já o fez crescer — duas telas a mais estouraram a dobra em
     // 900px, medido pelo e2e `navegacao.spec.ts`.
   },
+  // Personalização Ótica Mabe: o mod "Visual Mabe" (components/mabe/ajustes).
+  {
+    href: "/app/settings/visual-mabe",
+    label: "Visual Mabe",
+    description: "Cores da Mabe, mesa do atendente e motivos de conclusão.",
+    icon: "Palette",
+    group: "organizacao",
+    section: "Sua empresa",
+    minRole: "admin",
+  },
   {
     href: "/app/settings/billing",
     label: "Billing",

@@ -21,7 +21,7 @@ export const metadata: Metadata = { title: "Inbox" };
 export default async function InboxPage({
   searchParams,
 }: {
-  searchParams: Promise<{ id?: string; rascunho?: string; numero?: string; loja?: string }>;
+  searchParams: Promise<{ id?: string; rascunho?: string; numero?: string; loja?: string; atendente?: string }>;
 }) {
   const user = await loadAuthUser();
   if (!user) redirect("/login");
@@ -46,7 +46,7 @@ export default async function InboxPage({
       </div>
     );
   }
-  const { id, rascunho, numero, loja } = await searchParams;
+  const { id, rascunho, numero, loja, atendente } = await searchParams;
   // Personalização Ótica Mabe: mesa do atendente (components/mabe/atendimento), regida
   // por Configurações › Visual Mabe (components/mabe/ajustes).
   const mabe = await lerAjustesMabe(activeOrg.orgId);
@@ -58,7 +58,7 @@ export default async function InboxPage({
     lojaDosNumeros: lojaDosNumeros(await lerLojas(activeOrg.orgId)),
   };
   // ?numero= é o filtro de loja, que só existe na mesa: o link do painel de Lojas abre a mesa.
-  const mesaPorLink = !!(numero || loja) && vale(mabe, "mesa");
+  const mesaPorLink = !!(numero || loja || atendente) && vale(mabe, "mesa");
   if (mesaPorLink || modoDoInbox((await cookies()).get(COOKIE_DO_MODO)?.value, activeOrg.role, mabe) === "atendente") {
     return (
       <ProvedorMabe valor={contextoMabe}>

@@ -71,7 +71,7 @@ describe("painel de supervisão", () => {
     );
     const l15 = painel.find((l) => l.codigo === "L15")!;
     expect(l15).toMatchObject({ novos: 1, emAtendimento: 2, esperando: 2, maiorEsperaMin: 20, concluidosHoje: 2 });
-    expect(l15.atendentes).toEqual([{ nome: "Ana", emAtendimento: 2, esperando: 1, maiorEsperaMin: 5 }]);
+    expect(l15.atendentes).toEqual([{ id: U, nome: "Ana", emAtendimento: 2, esperando: 1, maiorEsperaMin: 5 }]);
     expect(l15.motivos).toEqual(expect.arrayContaining([{ motivo: "agendou exame", n: 1 }, { motivo: "sem motivo", n: 1 }]));
     expect(l15.parados[0].esperaMin).toBe(20);
     expect(painel.at(-1)!.codigo).toBe(SEM_LOJA);

@@ -153,8 +153,16 @@ function DetalheDaLoja({ loja }: { loja: LojaNoPainel }) {
               </thead>
               <tbody className="divide-y divide-border">
                 {loja.atendentes.map((a) => (
-                  <tr key={a.nome}>
-                    <td className="truncate py-1.5">{a.nome}</td>
+                  <tr key={a.id}>
+                    <td className="truncate py-1.5">
+                      <Link
+                        href={`/app/inbox?atendente=${a.id}&nome=${encodeURIComponent(a.nome)}${loja.codigo === SEM_LOJA ? "" : `&loja=${encodeURIComponent(loja.codigo)}`}`}
+                        className="underline-offset-2 hover:text-accent hover:underline"
+                        title={t("Ver as conversas desta pessoa")}
+                      >
+                        {a.nome}
+                      </Link>
+                    </td>
                     <td className="py-1.5 text-right tabular-nums">{a.emAtendimento}</td>
                     <td className="py-1.5 text-right tabular-nums">{a.esperando}</td>
                     <td className={cn("py-1.5 text-right tabular-nums", tomDaEspera(a.maiorEsperaMin))}>

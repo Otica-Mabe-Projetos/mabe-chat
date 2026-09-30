@@ -37,6 +37,9 @@ interface Props {
   /** Os números cobertos pelo filtro (todos os da loja), ou `null` sem filtro. */
   numerosDaSelecao: string[] | null;
   onNumero: (valor: string | null) => void;
+  /** Supervisão: vendo as conversas de uma pessoa (?atendente=). */
+  atendente?: { nome: string } | null;
+  onSairDoAtendente?: () => void;
   // A mesma forma que `ConversationList` recebe do Inbox oficial.
   listQuery: ReturnType<typeof useConversationsRealtime>;
   filters: ConversationsFilters;
@@ -99,6 +102,16 @@ export function ListaDeAtendimentos(props: Props) {
           })}
         </div>
 
+        {props.atendente ? (
+          <div className="mx-3 mt-2.5 flex items-center justify-between gap-2 rounded-md bg-accent-soft px-3 py-2 text-sm">
+            <span className="min-w-0 truncate">
+              {t("Conversas de")} <strong>{props.atendente.nome}</strong>
+            </span>
+            <button type="button" className="shrink-0 text-xs underline underline-offset-2" onClick={props.onSairDoAtendente}>
+              {t("Ver todas")}
+            </button>
+          </div>
+        ) : null}
         <SeletorDeLoja numero={props.numero} onNumero={props.onNumero} />
         <div className="flex items-center gap-2 px-3 pb-3 pt-2.5">
           <div className="flex shrink-0 rounded-md bg-surface-elevated p-0.5" role="group" aria-label={t("Filtro")}>
@@ -143,6 +156,7 @@ export function ListaDeAtendimentos(props: Props) {
           filters={props.filters}
           selectedId={props.selectedId}
           onSelect={props.onSelect}
+          sempreMostrarAtendente={props.aba !== "meus" || !!props.atendente}
           onLimparFiltros={() => {
             props.onBusca("");
             props.onSomenteNaoLidas(false);

@@ -78,6 +78,10 @@ export function Atendimento({ initialSelectedId = null }: { initialSelectedId?: 
       ? numeroNaUrl
       : null;
   const loja = searchParams.get("loja");
+  // Supervisão: ?atendente=<id> mostra as conversas em andamento de uma pessoa.
+  const atendenteNaUrl = searchParams.get("atendente");
+  const atendente = atendenteNaUrl && /^[0-9a-f-]{36}$/i.test(atendenteNaUrl) ? atendenteNaUrl : null;
+  const nomeDoAtendente = searchParams.get("nome");
   // Filtro de loja = TODOS os números dela que a pessoa enxerga.
   const numerosDaLoja = useMemo(
     () =>
@@ -148,7 +152,9 @@ export function Atendimento({ initialSelectedId = null }: { initialSelectedId?: 
   const { data: automaticoDaOrg } = useAutomaticoAtivo();
   const filters: ConversationsFilters = useMemo(
     () => ({
-      ...(aba === "novos"
+      ...(atendente
+        ? { assigned_to: atendente, exclude_finished: true }
+        : aba === "novos"
         ? { comando: comandosDaFila(automaticoDaOrg) }
         : aba === "meus"
           ? { assigned_to: "me", exclude_finished: true }
@@ -161,11 +167,11 @@ export function Atendimento({ initialSelectedId = null }: { initialSelectedId?: 
       // Mais novas no topo (padrão da Mabe), inclusive em Novos.
       ordem: ordemDaLista === "espera" ? undefined : ("recentes" as const),
     }),
-    [aba, automaticoDaOrg, busca, somenteNaoLidas, numero, numerosDaLoja, ordemDaLista],
+    [aba, automaticoDaOrg, busca, somenteNaoLidas, numero, numerosDaLoja, ordemDaLista, atendente],
   );
   const listQ = useConversationsRealtime(filters, orgId);
   const listaDaAba = useMemo(() => {
-    if (aba !== "outros" || !listQ.data) return listQ;
+    if (atendente || aba !== "outros" || !listQ.data) return listQ;
     return {
       ...listQ,
       data: {
@@ -259,6 +265,13 @@ export function Atendimento({ initialSelectedId = null }: { initialSelectedId?: 
             onSomenteNaoLidas={setSomenteNaoLidas}
             numero={selecao}
             numerosDaSelecao={numerosDaLoja ?? (numero ? [numero] : null)}
+            atendente={atendente ? { nome: nomeDoAtendente || t("Atendente") } : null}
+            onSairDoAtendente={() => {
+              const params = new URLSearchParams(searchParams.toString());
+              params.delete("atendente");
+              params.delete("nome");
+              router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+            }}
             onNumero={trocarNumero}
             listQuery={listaDaAba}
             filters={filters}

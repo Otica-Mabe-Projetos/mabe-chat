@@ -33,6 +33,8 @@ interface Props {
   onLimparFiltros?: () => void;
   /** Notifies parent when the visible list changes (used by keyboard nav). */
   onVisibleChange?: (ids: string[]) => void;
+  /** Personalização Ótica Mabe: na mesa, o nome de quem atende aparece sempre (supervisão). */
+  sempreMostrarAtendente?: boolean;
 }
 
 export function ConversationList({
@@ -42,6 +44,7 @@ export function ConversationList({
   onSelect,
   onVisibleChange,
   onLimparFiltros,
+  sempreMostrarAtendente,
 }: Props) {
   const t = useT();
   // Só mostra POR ONDE a conversa entrou quando há mais de um número. Com um
@@ -91,13 +94,14 @@ export function ConversationList({
    * a repetir o mesmo selo de atendente em cada uma das linhas.
    */
   const mostrarAtendente = useMemo(() => {
+    if (sempreMostrarAtendente) return true;
     if (filters.assigned_to) return false;
     if (filters.comando && !filters.comando.includes("humano")) return false;
     const donos = new Set(
       items.map((i) => i.assigned_to_user_id).filter((id): id is string => Boolean(id)),
     );
     return donos.size > 1;
-  }, [filters.assigned_to, filters.comando, items]);
+  }, [filters.assigned_to, filters.comando, items, sempreMostrarAtendente]);
 
   /**
    * O ícone de robô, mesma regra dos dois badges acima: só entra quando

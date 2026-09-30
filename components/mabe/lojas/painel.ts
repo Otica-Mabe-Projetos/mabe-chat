@@ -33,7 +33,7 @@ export type LojaNoPainel = {
   maiorEsperaMin: number;
   concluidosHoje: number;
   motivos: Array<{ motivo: string; n: number }>;
-  atendentes: Array<{ nome: string; emAtendimento: number; esperando: number; maiorEsperaMin: number }>;
+  atendentes: Array<{ id: string; nome: string; emAtendimento: number; esperando: number; maiorEsperaMin: number }>;
   parados: Parado[];
 };
 
@@ -100,6 +100,7 @@ export function montarPainel(
       const mapa = porAtendente.get(l.codigo) ?? new Map();
       porAtendente.set(l.codigo, mapa);
       const a = mapa.get(c.assigned_to_user_id) ?? {
+        id: c.assigned_to_user_id,
         nome: c.assigned_to_user_name ?? "Atendente",
         emAtendimento: 0,
         esperando: 0,

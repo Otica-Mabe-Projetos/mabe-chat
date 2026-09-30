@@ -243,6 +243,23 @@ export async function definirAcessoDoMembro(userId: unknown, acesso: unknown): P
   return aviso ? { ok: false, erro: aviso } : { ok: true };
 }
 
+/** O que o seletor de loja nos cartões de Conexões precisa: lojas ativas e a loja de cada número. */
+export async function lerLojasParaConexoes(): Promise<
+  | { ok: true; lojas: Array<{ codigo: string; rotulo: string; ativa: boolean }>; numeros: Record<string, string>; trava: boolean }
+  | { ok: false; erro: string }
+> {
+  const ctx = await exigirAdmin();
+  if (typeof ctx === "string") return { ok: false, erro: ctx };
+  const { data } = await createAdminClient().from("organizations").select("settings").eq("id", ctx.orgId).maybeSingle();
+  const cfg = lojasDeSettings(data?.settings ?? null);
+  return {
+    ok: true,
+    lojas: cfg.lojas.map((l) => ({ codigo: l.codigo, rotulo: rotuloDaLoja(l), ativa: l.ativa })),
+    numeros: cfg.numeros,
+    trava: cfg.trava,
+  };
+}
+
 /** O que o diálogo "Lojas que atende" precisa: as lojas ativas e o acesso atual da pessoa. */
 export async function lerAcessoDoMembro(
   userId: unknown,

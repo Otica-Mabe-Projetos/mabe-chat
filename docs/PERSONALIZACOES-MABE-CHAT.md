@@ -14,6 +14,7 @@ app é montada por nós, a cada versão oficial nova.
 | Inbox, topo da lista | **Nova conversa**: pelo telefone (com DDD). Se o número não é contato, vira contato. |
 | Funis, ficha do negócio | **Iniciar conversa no Inbox**, quando o negócio tem telefone e ainda não tem conversa. |
 | Contatos, ficha do contato | **Iniciar conversa no Inbox**, quando o contato tem telefone e ainda não tem conversa. |
+| Inbox (`/app/inbox`), para quem é atendente | **Mesa do atendente**: abas Novos/Meus/Outros, "Iniciar atendimento" antes de responder (espiar não marca como lida), Transferir, Concluir com motivo (etiqueta `motivo: …` + nota interna), origem do anúncio, painel do cliente e "+55 Conversar". Botões "Modo atendente / Modo completo" alternam. Pesquisa e decisões: [PESQUISA-TELA-ATENDIMENTO-2026-09-30.md](PESQUISA-TELA-ATENDIMENTO-2026-09-30.md) |
 
 Regras que valem nessas telas:
 

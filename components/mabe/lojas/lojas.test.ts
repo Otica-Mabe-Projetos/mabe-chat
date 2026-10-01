@@ -66,13 +66,13 @@ describe("situação das lojas", () => {
     expect(s.pessoasSemLoja).toEqual(["Bia"]);
   });
 
-  it("'todas' cobre todas as lojas", () => {
+  it("'todas' não cobre loja (não entra na distribuição), mas não é pessoa sem loja", () => {
     const s = situacaoDasLojas({
-      config: { ...base, acesso: { [U2]: { todas: true, lojas: [] } } },
+      config: { ...base, acesso: { [U2]: { todas: true, lojas: ["L10"] } } },
       numeros: [],
       membros: [{ id: U2, papel: "manager", nome: "Gerente" }],
     });
-    expect(s.lojasSemAtendente).toEqual([]);
+    expect(s.lojasSemAtendente).toEqual(["L15", "L10"]);
     expect(s.pessoasSemLoja).toEqual([]);
   });
 

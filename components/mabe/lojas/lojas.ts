@@ -138,11 +138,12 @@ export function situacaoDasLojas({
   membros: Array<{ id: string; papel: string; nome: string }>;
 }): { pessoasSemLoja: string[]; numerosSemLoja: string[]; lojasSemAtendente: string[] } {
   const equipe = membros.filter((m) => m.papel !== "admin");
-  const cobertas = new Set(equipe.flatMap((m) => config.acesso[m.id]?.lojas ?? []));
-  const alguemVeTodas = equipe.some((m) => config.acesso[m.id]?.todas);
+  // Quem tem "todas" só supervisiona: não entra na distribuição automática
+  // (ver sincronizarResponsaveis em salvar.ts), então não cobre loja nenhuma aqui.
+  const cobertas = new Set(equipe.filter((m) => !config.acesso[m.id]?.todas).flatMap((m) => config.acesso[m.id]?.lojas ?? []));
   return {
     pessoasSemLoja: equipe.filter((m) => !config.acesso[m.id]?.todas && !config.acesso[m.id]?.lojas.length).map((m) => m.nome),
     numerosSemLoja: numeros.filter((n) => !config.numeros[n.id]).map((n) => n.telefone ?? n.nome ?? n.id.slice(0, 8)),
-    lojasSemAtendente: alguemVeTodas ? [] : config.lojas.filter((l) => l.ativa && !cobertas.has(l.codigo)).map((l) => l.codigo),
+    lojasSemAtendente: config.lojas.filter((l) => l.ativa && !cobertas.has(l.codigo)).map((l) => l.codigo),
   };
 }

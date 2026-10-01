@@ -32,14 +32,13 @@ import {
   IdentificationCard,
 } from "@/lib/ui/icons";
 import { cn } from "@/lib/utils";
-import { esperaDesde } from "./espera";
+import { esperaDesde, useAgora } from "./espera";
 
 const ENCERRADOS = new Set(["closed", "archived", "resolved"]);
 
 interface Props {
   conversa: ConversationWithContact;
   eMinha: boolean;
-  agora: Date;
   onVoltar: () => void;
   onAbrirPainel: () => void;
   /** Presentes só quando as ações do atendimento valem (conversa minha, aberta, com escrita). */
@@ -59,13 +58,14 @@ function iniciais(nome: string): string {
 export function CabecalhoDoAtendimento({
   conversa,
   eMinha,
-  agora,
   onVoltar,
   onAbrirPainel,
   onTransferir,
   onConcluir,
 }: Props) {
   const t = useT();
+  // O tique de 30s redesenha só o cabeçalho (espera e Lembrar), não a conversa.
+  const agora = useAgora();
   const c = conversa.contacts;
   const telefone = c?.phone_number ? phoneForDisplay(c.phone_number) : null;
   const nome = rotuloDoContato(c, t);

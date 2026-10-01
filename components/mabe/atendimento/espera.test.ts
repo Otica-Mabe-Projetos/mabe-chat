@@ -1,6 +1,7 @@
-import { describe, expect, it } from "vitest";
+import { act, renderHook } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { esperaDesde } from "./espera";
+import { colunasDoCelular, esperaDesde, useAgora } from "./espera";
 
 describe("esperaDesde", () => {
   it("última mensagem nossa: não há espera, mesmo com awaiting_since preenchido", () => {
@@ -28,5 +29,30 @@ describe("esperaDesde", () => {
       "2026-09-29T10:00:00Z",
     );
     expect(esperaDesde({ last_inbound_at: null, last_outbound_at: null })).toBeNull();
+  });
+});
+
+describe("colunasDoCelular", () => {
+  it("sem conversa aberta: no celular só a lista aparece", () => {
+    expect(colunasDoCelular(false)).toEqual({ lista: "flex", conversa: "hidden md:flex" });
+  });
+  it("com conversa aberta: no celular só a conversa aparece", () => {
+    expect(colunasDoCelular(true)).toEqual({ lista: "hidden md:flex", conversa: "flex" });
+  });
+});
+
+describe("useAgora", () => {
+  afterEach(() => vi.useRealTimers());
+
+  it("só anda quando ativo", () => {
+    vi.useFakeTimers();
+    const ligado = renderHook(() => useAgora(1_000, true));
+    const desligado = renderHook(() => useAgora(1_000, false));
+    const antesLigado = ligado.result.current;
+    const antesDesligado = desligado.result.current;
+    act(() => vi.advanceTimersByTime(1_000));
+    expect(ligado.result.current).not.toBe(antesLigado);
+    expect(desligado.result.current).toBe(antesDesligado);
+    expect(vi.getTimerCount()).toBe(1);
   });
 });

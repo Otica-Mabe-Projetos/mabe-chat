@@ -7,7 +7,7 @@
  * oficial (`ConversationList`): mesma ordem da fila (quem espera há mais tempo
  * primeiro), mesmo tempo real.
  */
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { toast } from "sonner";
 
 import { ConversationList } from "@/components/inbox/ConversationList";
@@ -49,6 +49,15 @@ interface Props {
 
 export function ListaDeAtendimentos(props: Props) {
   const t = useT();
+  // A busca vai ao servidor 250ms depois da última tecla (como o Inbox oficial),
+  // não uma consulta por letra.
+  const [texto, setTexto] = useState(props.busca);
+  const { busca, onBusca } = props;
+  useEffect(() => {
+    if (texto === busca) return;
+    const id = setTimeout(() => onBusca(texto), 250);
+    return () => clearTimeout(id);
+  }, [texto, busca, onBusca]);
   const abas: Array<{ id: Aba; rotulo: string; n: number | null }> = [
     { id: "novos", rotulo: t("Novos"), n: props.contagem.novos },
     { id: "meus", rotulo: t("Meus"), n: props.contagem.meus },
@@ -139,8 +148,8 @@ export function ListaDeAtendimentos(props: Props) {
             <MagnifyingGlass size={14} className="shrink-0 text-text-subtle" aria-hidden />
             <input
               type="search"
-              value={props.busca}
-              onChange={(e) => props.onBusca(e.target.value)}
+              value={texto}
+              onChange={(e) => setTexto(e.target.value)}
               placeholder={t("Buscar…")}
               aria-label={t("Buscar nome ou telefone")}
               className="min-h-8 w-full min-w-0 bg-transparent text-sm outline-hidden placeholder:text-text-muted"
@@ -158,6 +167,7 @@ export function ListaDeAtendimentos(props: Props) {
           onSelect={props.onSelect}
           sempreMostrarAtendente={props.aba !== "meus" || !!props.atendente}
           onLimparFiltros={() => {
+            setTexto("");
             props.onBusca("");
             props.onSomenteNaoLidas(false);
             props.onNumero(null);

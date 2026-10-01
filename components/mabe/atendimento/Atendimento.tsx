@@ -17,7 +17,6 @@ import { toast } from "sonner";
 
 import { ChatThread } from "@/components/inbox/ChatThread";
 import { Composer } from "@/components/inbox/Composer";
-import { colunasDoCelular } from "@/components/inbox/InboxLayout";
 import { JanelaFechadaAviso } from "@/components/inbox/JanelaFechadaAviso";
 import { NumeroForaDoAr } from "@/components/inbox/NumeroForaDoAr";
 import { ReassignDialog } from "@/components/inbox/ReassignDialog";
@@ -33,6 +32,7 @@ import { useConversationCounts } from "@/hooks/inbox/useConversationCounts";
 import {
   useConversationsRealtime,
   type ConversationsFilters,
+  type ConversationWithContact,
 } from "@/hooks/inbox/useConversationsRealtime";
 import { useMarkAsRead } from "@/hooks/inbox/useMarkAsRead";
 import { OpenConversationProvider } from "@/hooks/notifications/OpenConversationContext";
@@ -48,6 +48,7 @@ import { CabecalhoDoAtendimento } from "./CabecalhoDoAtendimento";
 import { ConcluirComMotivo } from "./ConcluirComMotivo";
 import { numeroPermitido, useMabe } from "@/components/mabe/ajustes/ProvedorMabe";
 import { ListaDeAtendimentos, type Aba } from "./ListaDeAtendimentos";
+import { colunasDoCelular, useAgora } from "./espera";
 import { FaixaDoAnuncio } from "./OrigemDoAnuncio";
 import { PainelDoCliente } from "./PainelDoCliente";
 
@@ -182,7 +183,7 @@ export function Atendimento({ initialSelectedId = null }: { initialSelectedId?: 
         })),
       },
     } as typeof listQ;
-  }, [listQ, aba, user.id]);
+  }, [listQ, aba, user.id, atendente]);
   const contagens = useConversationCounts(orgId, {
     unread: somenteNaoLidas || undefined,
     channel_session_id: numerosDaLoja ? undefined : (numero ?? undefined),
@@ -219,22 +220,7 @@ export function Atendimento({ initialSelectedId = null }: { initialSelectedId?: 
     );
   };
 
-  // Janela de 24h: só vale para canal oficial; o WhatsApp por QR nunca fecha.
-  const [agora, setAgora] = useState(() => new Date());
-  useEffect(() => {
-    const i = setInterval(() => setAgora(new Date()), 30_000);
-    return () => clearInterval(i);
-  }, []);
   const provider = conversa?.channel_sessions?.provider ?? null;
-  const janela = estadoDaJanela(provider, conversa?.last_inbound_at ?? null, agora);
-  const motivoDaJanela =
-    janela.tipo === "fechada"
-      ? fonteDeTemplates(provider) === null
-        ? t("Aguarde uma nova mensagem do cliente para reabrir o atendimento nesta rede.")
-        : janela.fechadaHaMs === null
-          ? t("O cliente ainda não escreveu — a janela de 24h nunca abriu. Só um modelo aprovado sai daqui.")
-          : `${t("A janela de 24h fechou há")} ${formatarDecorrido(janela.fechadaHaMs)}. ${t("Só um modelo aprovado sai daqui — texto livre é recusado pela plataforma.")}`
-      : null;
   const bloqueio = conversa?.contacts?.is_blocked
     ? t("Contato bloqueado — envio de mensagens desabilitado.")
     : conversa?.contacts?.is_anonymized
@@ -286,7 +272,6 @@ export function Atendimento({ initialSelectedId = null }: { initialSelectedId?: 
               <CabecalhoDoAtendimento
                 conversa={conversa}
                 eMinha={eMinha}
-                agora={agora}
                 onVoltar={() => handleSelect(null)}
                 onAbrirPainel={() => setPainelAberto(true)}
                 {...(eMinha && !encerrada && !somenteLeitura
@@ -362,24 +347,14 @@ export function Atendimento({ initialSelectedId = null }: { initialSelectedId?: 
                       onAbrirConversa={handleSelect}
                     />
                   )}
-                  {motivoDaJanela && (
-                    <JanelaFechadaAviso conversationId={conversa.id} provider={provider} motivo={motivoDaJanela} />
-                  )}
-                  {/* Lembrar, Transferir e Concluir moram no cabeçalho; aqui só se
-                      escreve. Duas linhas de altura útil sem rolagem interna. */}
-                  <div className="[&_textarea]:min-h-14">
-                  <Composer
+                  <ComposerComJanela
                     key={conversa.id}
-                    conversationId={conversa.id}
-                    blockedReason={bloqueio}
-                    janelaFechada={motivoDaJanela}
-                    contactName={conversa.contacts?.name ?? null}
+                    conversa={conversa}
+                    provider={provider}
+                    bloqueio={bloqueio}
                     respondendo={respondendo}
                     onCancelarResposta={() => setRespondendo(null)}
-                    currentContactId={conversa.contact_id}
-                    semAssistencia
                   />
-                  </div>
                 </>
               ) : (
                 <Aviso
@@ -424,6 +399,15 @@ export function Atendimento({ initialSelectedId = null }: { initialSelectedId?: 
                 </SheetContent>
               </Sheet>
             </>
+          ) : needsFetch && single.isPending ? (
+            <EsqueletoDaConversa />
+          ) : needsFetch && single.isError && !naoEncontrada ? (
+            <div className="flex h-full flex-col items-center justify-center gap-3 px-6 text-center">
+              <p className="text-sm text-text-muted">{t("Não foi possível abrir a conversa.")}</p>
+              <Button variant="outline" size="sm" onClick={() => single.refetch()}>
+                {t("Tentar de novo")}
+              </Button>
+            </div>
           ) : naoEncontrada ? (
             <div className="flex h-full items-center justify-center px-6 text-center text-sm text-text-muted">
               {t("Conversa não encontrada ou fora do seu acesso.")}
@@ -446,6 +430,85 @@ export function Atendimento({ initialSelectedId = null }: { initialSelectedId?: 
         </div>
       </div>
     </OpenConversationProvider>
+  );
+}
+
+/**
+ * Aviso da janela de 24h + compositor. O relógio mora aqui (e só liga em canal com
+ * janela) para o tique de 30s não redesenhar a conversa inteira.
+ */
+function ComposerComJanela({
+  conversa,
+  provider,
+  bloqueio,
+  respondendo,
+  onCancelarResposta,
+}: {
+  conversa: ConversationWithContact;
+  provider: string | null;
+  bloqueio: string | null;
+  respondendo: Message | null;
+  onCancelarResposta: () => void;
+}) {
+  const t = useT();
+  // Janela de 24h: só vale para canal oficial; o WhatsApp por QR nunca fecha.
+  // "sem_restricao" depende só do provedor, não da hora.
+  const temJanela = estadoDaJanela(provider, null, new Date(0)).tipo !== "sem_restricao";
+  const agora = useAgora(30_000, temJanela);
+  const janela = estadoDaJanela(provider, conversa.last_inbound_at ?? null, agora);
+  const motivoDaJanela =
+    janela.tipo === "fechada"
+      ? fonteDeTemplates(provider) === null
+        ? t("Aguarde uma nova mensagem do cliente para reabrir o atendimento nesta rede.")
+        : janela.fechadaHaMs === null
+          ? t("O cliente ainda não escreveu — a janela de 24h nunca abriu. Só um modelo aprovado sai daqui.")
+          : `${t("A janela de 24h fechou há")} ${formatarDecorrido(janela.fechadaHaMs)}. ${t("Só um modelo aprovado sai daqui — texto livre é recusado pela plataforma.")}`
+      : null;
+
+  return (
+    <>
+      {motivoDaJanela && (
+        <JanelaFechadaAviso conversationId={conversa.id} provider={provider} motivo={motivoDaJanela} />
+      )}
+      {/* Lembrar, Transferir e Concluir moram no cabeçalho; aqui só se
+          escreve. Duas linhas de altura útil sem rolagem interna. */}
+      <div className="[&_textarea]:min-h-14">
+        <Composer
+          conversationId={conversa.id}
+          blockedReason={bloqueio}
+          janelaFechada={motivoDaJanela}
+          contactName={conversa.contacts?.name ?? null}
+          respondendo={respondendo}
+          onCancelarResposta={onCancelarResposta}
+          currentContactId={conversa.contact_id}
+          semAssistencia
+        />
+      </div>
+    </>
+  );
+}
+
+/** Enquanto a conversa aberta por link (?id=) ainda carrega. */
+function EsqueletoDaConversa() {
+  return (
+    <div className="flex h-full flex-col" aria-busy="true">
+      <div className="flex h-14 items-center gap-3 border-b border-border px-4">
+        <div className="h-10 w-10 shrink-0 animate-pulse rounded-full bg-surface-elevated" />
+        <div className="flex flex-1 flex-col gap-1.5">
+          <div className="h-3 w-40 animate-pulse rounded bg-surface-elevated" />
+          <div className="h-2.5 w-24 animate-pulse rounded bg-surface-elevated" />
+        </div>
+      </div>
+      <div className="flex flex-1 flex-col gap-3 p-4">
+        {["55%", "40%", "62%"].map((largura, i) => (
+          <div
+            key={largura}
+            className={cn("h-9 animate-pulse rounded-lg bg-surface-elevated", i % 2 ? "self-end" : "self-start")}
+            style={{ width: largura }}
+          />
+        ))}
+      </div>
+    </div>
   );
 }
 

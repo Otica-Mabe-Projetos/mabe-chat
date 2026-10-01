@@ -19,7 +19,7 @@ describe("lojas (personalização Mabe)", () => {
     const c = lojasDeSettings({});
     expect(c.lojas).toHaveLength(17);
     expect(c.trava).toBe(false);
-    expect(rotuloDaLoja(c.lojas[14])).toBe("L15 · Manaus Centro");
+    expect(rotuloDaLoja(c.lojas[14]!)).toBe("L15 · Manaus Centro");
   });
 
   it("dado inválido cai no padrão, parte a parte", () => {
@@ -73,7 +73,7 @@ describe("painel de supervisão", () => {
     expect(l15).toMatchObject({ novos: 1, emAtendimento: 2, esperando: 2, maiorEsperaMin: 20, concluidosHoje: 2 });
     expect(l15.atendentes).toEqual([{ id: U, nome: "Ana", emAtendimento: 2, esperando: 1, maiorEsperaMin: 5 }]);
     expect(l15.motivos).toEqual(expect.arrayContaining([{ motivo: "agendou exame", n: 1 }, { motivo: "sem motivo", n: 1 }]));
-    expect(l15.parados[0].esperaMin).toBe(20);
+    expect(l15.parados[0]!.esperaMin).toBe(20);
     expect(painel.at(-1)!.codigo).toBe(SEM_LOJA);
     expect(painel.find((l) => l.codigo === "BASE")!.novos).toBe(0);
   });

@@ -533,8 +533,8 @@ function EsqueletoDaConversa() {
       <div className="flex h-14 items-center gap-3 border-b border-border px-4">
         <div className="h-10 w-10 shrink-0 animate-pulse rounded-full bg-surface-elevated" />
         <div className="flex flex-1 flex-col gap-1.5">
-          <div className="h-3 w-40 animate-pulse rounded bg-surface-elevated" />
-          <div className="h-2.5 w-24 animate-pulse rounded bg-surface-elevated" />
+          <div className="h-3 w-40 animate-pulse rounded-md bg-surface-elevated" />
+          <div className="h-2.5 w-24 animate-pulse rounded-md bg-surface-elevated" />
         </div>
       </div>
       <div className="flex flex-1 flex-col gap-3 p-4">

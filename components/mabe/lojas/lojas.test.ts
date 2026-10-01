@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { CONFIG_PADRAO, lojasDeSettings, lojasVisiveis, numerosVisiveis, rotuloDaLoja, type ConfigLojas } from "./lojas";
+import { CONFIG_PADRAO, lojasDeSettings, lojasVisiveis, numerosVisiveis, rotuloDaLoja, situacaoDasLojas, type ConfigLojas } from "./lojas";
 import { montarPainel, SEM_LOJA, type ConversaDoPainel } from "./painel";
 
 const N1 = "0c5a8f6e-544c-49ee-914c-d76ecff02add";
@@ -35,6 +35,55 @@ describe("lojas (personalização Mabe)", () => {
     expect(numerosVisiveis({ ...cfg, trava: false }, U, "agent")).toBeNull();
     expect(numerosVisiveis(cfg, "22222222-2222-4222-8222-222222222222", "agent")).toEqual([]);
     expect(numerosVisiveis({ ...cfg, acesso: { [U]: { todas: true, lojas: [] } } }, U, "agent")).toBeNull();
+  });
+});
+
+describe("situação das lojas", () => {
+  const U2 = "22222222-2222-4222-8222-222222222222";
+  const N3 = "33333333-3333-4333-8333-333333333333";
+  const lojas = [
+    { codigo: "L15", nome: "Manaus Centro", cidade: "Manaus", ativa: true },
+    { codigo: "L10", nome: "Manaus", cidade: "Manaus", ativa: true },
+    { codigo: "L99", nome: "Ações", cidade: "", ativa: false },
+  ];
+  const base: ConfigLojas = { ...cfg, lojas };
+  const numeros = [
+    { id: N1, telefone: "5592999990001", nome: null },
+    { id: N2, telefone: "5592999990002", nome: null },
+    { id: N3, telefone: "5592999990003", nome: null },
+  ];
+
+  it("admin não conta como sem loja; quem não tem loja aparece", () => {
+    const s = situacaoDasLojas({
+      config: base,
+      numeros: [],
+      membros: [
+        { id: U, papel: "agent", nome: "Ana" },
+        { id: U2, papel: "admin", nome: "Paulo" },
+        { id: "44444444-4444-4444-8444-444444444444", papel: "agent", nome: "Bia" },
+      ],
+    });
+    expect(s.pessoasSemLoja).toEqual(["Bia"]);
+  });
+
+  it("'todas' cobre todas as lojas", () => {
+    const s = situacaoDasLojas({
+      config: { ...base, acesso: { [U2]: { todas: true, lojas: [] } } },
+      numeros: [],
+      membros: [{ id: U2, papel: "manager", nome: "Gerente" }],
+    });
+    expect(s.lojasSemAtendente).toEqual([]);
+    expect(s.pessoasSemLoja).toEqual([]);
+  });
+
+  it("número sem loja aparece", () => {
+    const s = situacaoDasLojas({ config: base, numeros, membros: [] });
+    expect(s.numerosSemLoja).toEqual(["5592999990003"]);
+  });
+
+  it("loja inativa não aparece em lojas sem ninguém", () => {
+    const s = situacaoDasLojas({ config: base, numeros, membros: [{ id: U, papel: "agent", nome: "Ana" }] });
+    expect(s.lojasSemAtendente).toEqual(["L10"]);
   });
 });
 

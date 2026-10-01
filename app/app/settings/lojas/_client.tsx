@@ -11,12 +11,23 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
 import { LojasDoMembroDialog } from "@/components/mabe/lojas/LojasDoMembroDialog";
-import { rotuloDaLoja, type ConfigLojas, type Loja } from "@/components/mabe/lojas/lojas";
+import { rotuloDaLoja, situacaoDasLojas, type ConfigLojas, type Loja } from "@/components/mabe/lojas/lojas";
 import {
   definirLojaDoNumero,
   definirTravaPorLoja,
   salvarCadastroDeLojas,
+  type RespostaLojas,
 } from "@/components/mabe/lojas/salvar";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -59,17 +70,44 @@ export function TelaDeLojas({
   const router = useRouter();
   const [ocupado, iniciar] = useTransition();
   const [editando, setEditando] = useState<Membro | null>(null);
+  /** Ligar/desligar a restrição só depois de confirmar (`null` = sem pergunta aberta). */
+  const [confirmarTrava, setConfirmarTrava] = useState<boolean | null>(null);
   const nomeDaLoja = (codigo: string) => config.lojas.find((l) => l.codigo === codigo)?.nome ?? codigo;
 
-  const acao = (fn: () => Promise<{ ok: true } | { ok: false; erro: string }>, sucesso: string) =>
+  const acao = (fn: () => Promise<RespostaLojas>, sucesso: string) =>
     iniciar(async () => {
       const r = await fn();
       if (!r.ok) return void toast.error(t(r.erro));
-      toast.success(t(sucesso));
+      // Salvo, mas algo em volta não acompanhou: aviso, não erro.
+      if (r.aviso) toast.warning(t(r.aviso));
+      else toast.success(t(sucesso));
       router.refresh();
     });
 
-  const semLoja = membros.filter((m) => m.papel !== "admin" && !config.acesso[m.id]?.todas && !(config.acesso[m.id]?.lojas.length));
+  const situacao = situacaoDasLojas({ config, numeros, membros });
+  const linhasDaSituacao = [
+    situacao.pessoasSemLoja.length
+      ? t("{n} pessoa(s) sem loja — com a restrição ligada, não veem nenhuma conversa.").replace("{n}", String(situacao.pessoasSemLoja.length))
+      : null,
+    situacao.numerosSemLoja.length
+      ? t("{n} número(s) sem loja — com a restrição ligada, só administradores e quem vê todas as lojas enxergam essas conversas.").replace(
+          "{n}",
+          String(situacao.numerosSemLoja.length),
+        )
+      : null,
+    situacao.lojasSemAtendente.length
+      ? t("Lojas sem ninguém marcado: {lista}.").replace("{lista}", situacao.lojasSemAtendente.join(", "))
+      : null,
+  ].filter((l): l is string => !!l);
+  const quadroDaSituacao = (
+    <ul className="list-disc space-y-1 pl-5 text-sm">
+      {linhasDaSituacao.length ? (
+        linhasDaSituacao.map((l) => <li key={l}>{l}</li>)
+      ) : (
+        <li className="list-none -ml-5">{t("Tudo marcado: toda pessoa, número e loja ativa tem loja ou atendente.")}</li>
+      )}
+    </ul>
+  );
 
   return (
     <div className="flex max-w-4xl flex-col gap-8">
@@ -134,7 +172,7 @@ export function TelaDeLojas({
       <section className="space-y-3">
         <Titulo
           titulo={t("Quem atende cada loja")}
-          descricao={t("Marque as lojas de cada pessoa. Com a restrição ligada, cada um só vê as conversas dos números das suas lojas — no Inbox, na mesa, na busca e em link direto. Admin sempre vê tudo.")}
+          descricao={t("Marque as lojas de cada pessoa. Com a restrição ligada, cada um só vê as conversas e mensagens dos números das suas lojas (Inbox, mesa, busca e link direto). Contatos, Funis, Agenda e Tarefas continuam visíveis para toda a equipe. Administrador sempre vê tudo.")}
         />
         <Card className="space-y-4 p-4">
           <div className="flex items-start justify-between gap-4">
@@ -145,20 +183,25 @@ export function TelaDeLojas({
                   ? t("Ligada: quem não tem loja marcada não vê nenhuma conversa.")
                   : t("Desligada: todos veem todas as lojas. Marque as lojas das pessoas antes de ligar.")}
               </p>
-              {!config.trava && semLoja.length > 0 ? (
-                <p className="text-sm text-warning-fg">
-                  {semLoja.length} {t("pessoa(s) ainda sem loja — ao ligar, não verão nenhuma conversa.")}
-                </p>
-              ) : null}
             </div>
             <Switch
               checked={config.trava}
               disabled={ocupado}
               aria-label={t("Restrição por loja")}
-              onCheckedChange={(v) =>
-                acao(() => definirTravaPorLoja(v), v ? "Restrição por loja ligada." : "Restrição por loja desligada.")
-              }
+              onCheckedChange={(v) => setConfirmarTrava(v)}
             />
+          </div>
+          <div
+            role="status"
+            className={cn(
+              "space-y-1.5 rounded-md border px-3 py-2.5",
+              config.trava && linhasDaSituacao.length
+                ? "border-warning/40 bg-warning-bg text-warning-fg"
+                : "border-border bg-surface-elevated text-text-muted",
+            )}
+          >
+            <p className="text-xs font-semibold uppercase tracking-wide">{t("Situação")}</p>
+            {quadroDaSituacao}
           </div>
           <div className="divide-y rounded-md border border-border">
             {membros.map((m) => {
@@ -196,6 +239,34 @@ export function TelaDeLojas({
 
       {/* 3. Cadastro */}
       <CadastroDeLojas lojas={config.lojas} ocupado={ocupado} onSalvar={(l) => acao(() => salvarCadastroDeLojas(l), "Lojas salvas.")} />
+
+      <AlertDialog open={confirmarTrava !== null} onOpenChange={(aberto) => !aberto && setConfirmarTrava(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {confirmarTrava ? t("Ligar a restrição por loja?") : t("Desligar a restrição por loja?")}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {confirmarTrava
+                ? t("Cada pessoa passa a ver só as conversas dos números das suas lojas, e a distribuição automática vai só para quem atende a loja.")
+                : t("Todos voltam a ver as conversas de todas as lojas, e a distribuição dos números com loja volta ao padrão.")}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          {quadroDaSituacao}
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t("Cancelar")}</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                const v = confirmarTrava === true;
+                setConfirmarTrava(null);
+                acao(() => definirTravaPorLoja(v), v ? "Restrição por loja ligada." : "Restrição por loja desligada.");
+              }}
+            >
+              {confirmarTrava ? t("Ligar restrição") : t("Desligar restrição")}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {editando ? <LojasDoMembroDialog userId={editando.id} nome={editando.nome} onClose={() => setEditando(null)} /> : null}
     </div>

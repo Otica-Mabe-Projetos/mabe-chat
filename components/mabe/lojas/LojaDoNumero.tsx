@@ -25,6 +25,7 @@ export function LojaDoNumero({ sessionId }: { sessionId: string }) {
     iniciar(async () => {
       const r = await definirLojaDoNumero(sessionId, codigo || null);
       if (!r.ok) toast.error(t(r.erro));
+      else if (r.aviso) toast.warning(t(r.aviso));
       else toast.success(codigo ? t("Loja do número salva.") : t("Número sem loja."));
       await Promise.all([
         qc.invalidateQueries({ queryKey: ["mabe-lojas"] }),

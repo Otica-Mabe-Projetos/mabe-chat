@@ -122,3 +122,27 @@ export function lojaDosNumeros(cfg: ConfigLojas): Record<string, { codigo: strin
   }
   return r;
 }
+
+/**
+ * O que pode dar errado com a restrição ligada, para o quadro "Situação" da tela:
+ * pessoas sem loja (não admin, sem "todas"), números sem loja e lojas ativas que
+ * ninguém atende (nem quem vê todas). Só leitura: não muda regra nenhuma.
+ */
+export function situacaoDasLojas({
+  config,
+  numeros,
+  membros,
+}: {
+  config: ConfigLojas;
+  numeros: Array<{ id: string; telefone: string | null; nome: string | null }>;
+  membros: Array<{ id: string; papel: string; nome: string }>;
+}): { pessoasSemLoja: string[]; numerosSemLoja: string[]; lojasSemAtendente: string[] } {
+  const equipe = membros.filter((m) => m.papel !== "admin");
+  const cobertas = new Set(equipe.flatMap((m) => config.acesso[m.id]?.lojas ?? []));
+  const alguemVeTodas = equipe.some((m) => config.acesso[m.id]?.todas);
+  return {
+    pessoasSemLoja: equipe.filter((m) => !config.acesso[m.id]?.todas && !config.acesso[m.id]?.lojas.length).map((m) => m.nome),
+    numerosSemLoja: numeros.filter((n) => !config.numeros[n.id]).map((n) => n.telefone ?? n.nome ?? n.id.slice(0, 8)),
+    lojasSemAtendente: alguemVeTodas ? [] : config.lojas.filter((l) => l.ativa && !cobertas.has(l.codigo)).map((l) => l.codigo),
+  };
+}

@@ -29,7 +29,16 @@ import {
   type ConfigLojas,
 } from "./lojas";
 
-export type RespostaLojas = { ok: true } | { ok: false; erro: string };
+/** `aviso`: os dados foram salvos, mas algo em volta (nome do número, distribuição) não acompanhou. */
+export type RespostaLojas = { ok: true; aviso?: string } | { ok: false; erro: string };
+
+const AVISO_MFA = "Confirme o código de duas etapas e salve de novo para atualizar a distribuição.";
+
+/** Junta os avisos que houver; `{ ok: true }` limpo quando não há nenhum. */
+function salvoCom(...avisos: Array<string | null>): RespostaLojas {
+  const aviso = avisos.filter(Boolean).join(" ");
+  return aviso ? { ok: true, aviso } : { ok: true };
+}
 
 type Contexto = { orgId: string; userId: string };
 
@@ -87,9 +96,10 @@ async function gravar(
  * número ganha o final do telefone ("L10 · Manaus · 4521") para as opções não
  * ficarem iguais nos seletores.
  */
-async function sincronizarNomes(orgId: string, cfg: ConfigLojas, codigos: Iterable<string>): Promise<void> {
+async function sincronizarNomes(orgId: string, cfg: ConfigLojas, codigos: Iterable<string>): Promise<string | null> {
   const admin = createAdminClient();
   const canais = await listSelectableChannels(admin, orgId);
+  const renomear: Array<Promise<boolean>> = [];
   for (const codigo of new Set(codigos)) {
     const loja = lojaPorCodigo(cfg, codigo);
     if (!loja) continue;
@@ -97,9 +107,18 @@ async function sincronizarNomes(orgId: string, cfg: ConfigLojas, codigos: Iterab
     for (const id of ids) {
       const final = (canais.find((c) => c.id === id)?.phone_number ?? "").replace(/\D/g, "").slice(-4);
       const nome = ids.length > 1 && final ? `${rotuloDaLoja(loja)} · ${final}` : rotuloDaLoja(loja);
-      await nomearNumero(admin, orgId, id, nome.slice(0, 80));
+      renomear.push(nomearNumero(admin, orgId, id, nome.slice(0, 80)));
     }
   }
+  const falhas = (await Promise.all(renomear)).filter((ok) => !ok).length;
+  return falhas ? `Salvo, mas ${falhas} número(s) não foram renomeados com o nome da loja.` : null;
+}
+
+/** Aviso de distribuição não atualizada; sessão sem duas etapas confirmadas ganha a instrução certa. */
+function avisoDeDistribuicao(falhas: number, mfa: boolean): string | null {
+  if (!falhas) return null;
+  if (mfa) return AVISO_MFA;
+  return `Salvo, mas ${falhas} número(s) não tiveram os responsáveis atualizados. Confira em Configurações › Atendimento.`;
 }
 
 /**
@@ -111,30 +130,33 @@ async function sincronizarNomes(orgId: string, cfg: ConfigLojas, codigos: Iterab
  */
 async function sincronizarResponsaveis(ctx: Contexto, cfg: ConfigLojas, trocouParaDesligada: boolean): Promise<string | null> {
   if (!cfg.trava && !trocouParaDesligada) return null;
-  const { data: membros } = await createAdminClient()
+  const { data: membros, error: erroMembros } = await createAdminClient()
     .from("user_organizations")
     .select("user_id, role")
     .eq("organization_id", ctx.orgId)
     .is("revoked_at", null)
     .not("accepted_at", "is", null)
     .in("role", ["agent", "manager"]);
+  const sessoes = Object.entries(cfg.numeros);
+  // Sem a lista da equipe, gravar agora zeraria os responsáveis: melhor não mexer.
+  if (erroMembros) return avisoDeDistribuicao(sessoes.length, false);
   const db = await createClient();
-  let falhas = 0;
-  for (const [sessao, codigo] of Object.entries(cfg.numeros)) {
-    const usuarios = cfg.trava
-      ? (membros ?? [])
-          .filter((m) => !cfg.acesso[m.user_id]?.todas && cfg.acesso[m.user_id]?.lojas.includes(codigo))
-          .map((m) => m.user_id)
-      : [];
-    const { error } = await db.rpc("fn_set_channel_routing", {
-      p_org: ctx.orgId,
-      p_channel: sessao,
-      p_users: usuarios,
-      p_reset: !cfg.trava,
-    });
-    if (error) falhas++;
-  }
-  return falhas ? `Salvo, mas ${falhas} número(s) não tiveram os responsáveis atualizados. Confira em Configurações › Atendimento.` : null;
+  const resultados = await Promise.all(
+    sessoes.map(([sessao, codigo]) =>
+      db.rpc("fn_set_channel_routing", {
+        p_org: ctx.orgId,
+        p_channel: sessao,
+        p_users: cfg.trava
+          ? (membros ?? [])
+              .filter((m) => !cfg.acesso[m.user_id]?.todas && cfg.acesso[m.user_id]?.lojas.includes(codigo))
+              .map((m) => m.user_id)
+          : [],
+        p_reset: !cfg.trava,
+      }),
+    ),
+  );
+  const erros = resultados.filter((r) => r.error).map((r) => r.error?.message ?? "");
+  return avisoDeDistribuicao(erros.length, erros.some((m) => /mfa/i.test(m)));
 }
 
 /** Cadastro das lojas (criar, renomear, desativar). Renomear atualiza o nome dos números dela. */
@@ -167,8 +189,7 @@ export async function salvarCadastroDeLojas(entrada: unknown): Promise<RespostaL
   const renomeadas = r.cfg.lojas
     .filter((l) => r.antes.lojas.find((a) => a.codigo === l.codigo)?.nome !== l.nome)
     .map((l) => l.codigo);
-  await sincronizarNomes(ctx.orgId, r.cfg, renomeadas);
-  return { ok: true };
+  return salvoCom(await sincronizarNomes(ctx.orgId, r.cfg, renomeadas));
 }
 
 /** Liga um número a uma loja (ou desliga, com `null`) e dá ao número o nome da loja. */
@@ -202,16 +223,25 @@ export async function definirLojaDoNumero(sessionId: unknown, codigo: unknown): 
   );
   if (!r.ok) return r;
   const anterior = r.antes.numeros[id.data];
-  if (cod.data === null && !(await nomearNumero(createAdminClient(), ctx.orgId, id.data, null))) {
-    return { ok: false, erro: "A loja foi salva, mas não consegui renomear o número." };
-  }
-  await sincronizarNomes(ctx.orgId, r.cfg, [cod.data, anterior].filter((c): c is string => !!c));
+  const avisoNome =
+    cod.data === null && !(await nomearNumero(createAdminClient(), ctx.orgId, id.data, null))
+      ? "A loja foi salva, mas não consegui renomear o número."
+      : null;
+  const avisoNomes = await sincronizarNomes(ctx.orgId, r.cfg, [cod.data, anterior].filter((c): c is string => !!c));
+  let avisoReset: string | null = null;
   if (r.cfg.trava && cod.data === null && anterior) {
     // Número que saiu da loja volta ao padrão de distribuição.
-    await (await createClient()).rpc("fn_set_channel_routing", { p_org: ctx.orgId, p_channel: id.data, p_users: [], p_reset: true });
+    const { error } = await (await createClient()).rpc("fn_set_channel_routing", {
+      p_org: ctx.orgId,
+      p_channel: id.data,
+      p_users: [],
+      p_reset: true,
+    });
+    if (error) avisoReset = /mfa/i.test(error.message) ? AVISO_MFA : "Salvo, mas o número não voltou à distribuição padrão. Confira em Configurações › Atendimento.";
   }
-  const aviso = await sincronizarResponsaveis(ctx, r.cfg, false);
-  return aviso ? { ok: false, erro: aviso } : { ok: true };
+  const avisoResp = await sincronizarResponsaveis(ctx, r.cfg, false);
+  // O mesmo aviso de duas etapas não precisa aparecer duas vezes.
+  return salvoCom(avisoNome, avisoNomes, avisoReset === avisoResp ? null : avisoReset, avisoResp);
 }
 
 /** Lojas que uma pessoa atende. Só membros desta organização. */
@@ -240,8 +270,7 @@ export async function definirAcessoDoMembro(userId: unknown, acesso: unknown): P
     "acesso",
   );
   if (!r.ok) return r;
-  const aviso = await sincronizarResponsaveis(ctx, r.cfg, false);
-  return aviso ? { ok: false, erro: aviso } : { ok: true };
+  return salvoCom(await sincronizarResponsaveis(ctx, r.cfg, false));
 }
 
 /** Resumo "quem vê quais lojas" para a lista da Equipe (só admin). */
@@ -303,6 +332,5 @@ export async function definirTravaPorLoja(ligada: unknown): Promise<RespostaLoja
   if (typeof ctx === "string") return { ok: false, erro: ctx };
   const r = await gravar(ctx, (cfg) => ({ ...cfg, trava: v.data }), v.data ? "trava_ligada" : "trava_desligada");
   if (!r.ok) return r;
-  const aviso = await sincronizarResponsaveis(ctx, r.cfg, r.antes.trava && !r.cfg.trava);
-  return aviso ? { ok: false, erro: aviso } : { ok: true };
+  return salvoCom(await sincronizarResponsaveis(ctx, r.cfg, r.antes.trava && !r.cfg.trava));
 }

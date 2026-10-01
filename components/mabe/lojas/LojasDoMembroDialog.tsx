@@ -34,24 +34,42 @@ export function EditorDeLojasDoMembro({ userId, onSalvo }: { userId: string; onS
   const [marcadas, setMarcadas] = useState<string[]>([]);
   const [trava, setTrava] = useState(true);
   const [erro, setErro] = useState<string | null>(null);
+  const [falhou, setFalhou] = useState(false);
+  const [tentativa, setTentativa] = useState(0);
   const [salvando, iniciar] = useTransition();
 
   useEffect(() => {
     let vivo = true;
-    void lerAcessoDoMembro(userId).then((r) => {
-      if (!vivo) return;
-      if (!r.ok) return setErro(r.erro);
-      setLojas(r.lojas);
-      setTodas(r.todas);
-      setMarcadas(r.marcadas);
-      setTrava(r.trava);
-    });
+    lerAcessoDoMembro(userId)
+      .then((r) => {
+        if (!vivo) return;
+        if (!r.ok) return setErro(r.erro);
+        setLojas(r.lojas);
+        setTodas(r.todas);
+        setMarcadas(r.marcadas);
+        setTrava(r.trava);
+      })
+      // Falha de rede/servidor não é falta de permissão: mostra e deixa tentar de novo.
+      .catch(() => vivo && setFalhou(true));
     return () => {
       vivo = false;
     };
-  }, [userId]);
+  }, [userId, tentativa]);
 
   if (erro) return null; // quem não é admin não edita lojas: o bloco some
+  if (falhou) {
+    return (
+      <div className="flex flex-wrap items-center gap-3">
+        <p className="text-sm text-error-fg">{t("Não consegui carregar as lojas. Tente de novo.")}</p>
+        <Button type="button" size="sm" variant="outline" onClick={() => {
+            setFalhou(false);
+            setTentativa((n) => n + 1);
+          }}>
+          {t("Tentar de novo")}
+        </Button>
+      </div>
+    );
+  }
   if (!lojas) return <p className="text-sm text-text-muted">{t("Carregando lojas…")}</p>;
 
   const alternar = (codigo: string) =>
@@ -61,7 +79,8 @@ export function EditorDeLojasDoMembro({ userId, onSalvo }: { userId: string; onS
     iniciar(async () => {
       const r = await definirAcessoDoMembro(userId, { todas, lojas: marcadas });
       if (!r.ok) return void toast.error(t(r.erro));
-      toast.success(t("Lojas salvas."));
+      if (r.aviso) toast.warning(t(r.aviso));
+      else toast.success(t("Lojas salvas."));
       void qc.invalidateQueries({ queryKey: ["mabe-lojas-equipe"] });
       router.refresh();
       onSalvo?.();

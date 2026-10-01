@@ -10,6 +10,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
+import { ImportarRespostas } from "@/components/mabe/ajustes/ImportarRespostas";
 import { PADRAO, TONS, type AjustesMabe, type Tom } from "@/components/mabe/ajustes/ajustes";
 import { salvarAjustesMabe } from "@/components/mabe/ajustes/salvar";
 import { Button } from "@/components/ui/button";
@@ -258,6 +259,14 @@ export function FormularioVisualMabe({ gravado }: { gravado: AjustesMabe }) {
               {t("Motivos padrão")}
             </Button>
           </div>
+        </Card>
+
+        <Card className="flex flex-wrap items-center justify-between gap-4 p-5">
+          <div className="space-y-0.5">
+            <p className="text-sm font-medium">{t("Respostas rápidas")}</p>
+            <p className="text-sm text-muted-foreground">{t("Digite / no campo de resposta para usar.")}</p>
+          </div>
+          <ImportarRespostas />
         </Card>
 
         <div>

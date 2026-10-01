@@ -149,6 +149,9 @@ export interface ClienteResumo {
   gerado_em: string | null;
 }
 
+/** Um cliente achado pelo telefone da conversa, com o rótulo da loja ("L05 · …"). */
+export type ClienteDaConversa = ClienteResumo & { loja_rotulo: string | null };
+
 export interface ResultadoDaBusca {
   total: number;
   limite: number;

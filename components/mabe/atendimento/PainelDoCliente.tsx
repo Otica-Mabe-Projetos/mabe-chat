@@ -17,6 +17,7 @@ import type { ConversationWithContact } from "@/hooks/inbox/useConversationsReal
 import { phoneForDisplay } from "@/lib/channels/phone-variants";
 import { ArrowSquareOut, CalendarPlus, IdentificationCard, Plus } from "@/lib/ui/icons";
 import { cn } from "@/lib/utils";
+import { ClienteDaOtica } from "./ClienteDaOtica";
 import { CartaoDeOrigem } from "./OrigemDoAnuncio";
 
 export function PainelDoCliente({ conversation }: { conversation: ConversationWithContact | null }) {
@@ -48,6 +49,8 @@ export function PainelDoCliente({ conversation }: { conversation: ConversationWi
           </p>
         )}
       </header>
+
+      <ClienteDaOtica conversationId={conversation.id} />
 
       <CartaoDeOrigem contactId={conversation.contact_id} />
 

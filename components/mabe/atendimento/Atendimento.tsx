@@ -305,7 +305,12 @@ export function Atendimento({ initialSelectedId = null }: { initialSelectedId?: 
                   ? { onTransferir: () => setTransferindo(true), onConcluir: () => setConcluindo(true) }
                   : {})}
               />
-              <FaixaDoAnuncio contactId={conversa.contact_id} />
+              {/* key: troca de conversa recomeça o estado aberto/fechado da faixa. */}
+              <FaixaDoAnuncio
+                key={conversa.id}
+                contactId={conversa.contact_id}
+                abertaDeInicio={semDono}
+              />
               {/*
                 Sem rolagem horizontal: o player de áudio oficial tem largura fixa
                 (w-60) e, numa bolha limitada a 75% de uma coluna estreita, vazava

@@ -61,10 +61,17 @@ function useOrigem(contactId: string | null): Origem | null {
 }
 
 /** Faixa no topo da conversa. Some quando o lead não veio de anúncio. */
-export function FaixaDoAnuncio({ contactId }: { contactId: string | null }) {
+export function FaixaDoAnuncio({
+  contactId,
+  abertaDeInicio = false,
+}: {
+  contactId: string | null;
+  /** Conversa em Novos: o anúncio já aparece aberto no primeiro contato. */
+  abertaDeInicio?: boolean;
+}) {
   const t = useT();
   const o = useOrigem(contactId);
-  const [aberta, setAberta] = useState(false);
+  const [aberta, setAberta] = useState(abertaDeInicio);
   if (!o?.veioDeAnuncio) return null;
 
   return (

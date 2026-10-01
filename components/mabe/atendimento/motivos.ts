@@ -7,9 +7,17 @@
  * interna com quem concluiu. Etiqueta é trim + minúsculas, até 40 caracteres.
  */
 export const MOTIVOS_DE_CONCLUSAO = [
+  // Os textos que já existiam ficam IGUAIS: a etiqueta é o texto, e mudar quebraria
+  // o histórico dos relatórios (por isso "Sem interesse" não virou "… / preço").
   "Agendou exame",
-  "Pós-venda resolvido",
+  "Remarcou exame",
   "Enviou orçamento",
+  "Já tem receita (orçamento)",
+  "Fechou venda",
+  "Acompanhamento de OS",
+  "Retirada de óculos",
+  "Garantia / ajuste",
+  "Pós-venda resolvido",
   "Sem interesse",
   "Sem resposta do cliente",
   "Fora da área de atendimento",

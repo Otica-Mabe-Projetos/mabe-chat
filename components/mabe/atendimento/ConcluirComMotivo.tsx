@@ -6,7 +6,7 @@
  * motivo vira etiqueta `motivo: …` da conversa (filtrável) e uma nota interna com o
  * que foi escolhido; só depois a conversa é fechada pelo caminho oficial.
  */
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -44,31 +44,47 @@ export function ConcluirComMotivo({ conversationId, etiquetas, open, onOpenChang
   const tags = useUpdateConversationTags();
   const fechar = useCloseConversation();
   const enviando = nota.isPending || tags.isPending || fechar.isPending;
+  // Se etiquetas ou fechar falham, o novo clique não pode criar uma segunda nota.
+  const notaFeita = useRef(false);
+  useEffect(() => {
+    notaFeita.current = false;
+  }, [conversationId]);
+
+  const mudarAberto = (v: boolean) => {
+    if (!v) notaFeita.current = false;
+    onOpenChange(v);
+  };
 
   const concluir = async () => {
     if (!motivo) return;
     try {
       const obs = observacao.trim();
-      await nota.mutateAsync({
-        conversation_id: conversationId,
-        body: `${t("Atendimento concluído")} — ${t("motivo")}: ${t(motivo)}${obs ? `\n${obs}` : ""}`,
-      });
+      if (!notaFeita.current) {
+        await nota.mutateAsync({
+          conversation_id: conversationId,
+          body: `${t("Atendimento concluído")} — ${t("motivo")}: ${t(motivo)}${obs ? `\n${obs}` : ""}`,
+        });
+        notaFeita.current = true;
+      }
       await tags.mutateAsync({
         conversation_id: conversationId,
         tags: etiquetasComMotivo(etiquetas, motivo),
       });
       await fechar.mutateAsync({ conversation_id: conversationId });
       toast.success(t("Atendimento concluído."));
-      onOpenChange(false);
+      mudarAberto(false);
       setMotivo(null);
       setObservacao("");
     } catch {
-      /* cada hook já mostrou o erro */
+      // Cada hook já mostrou o erro técnico; aqui o resumo quando a nota já saiu.
+      if (notaFeita.current) {
+        toast.error(t("Motivo salvo, mas a conversa não foi concluída. Tente de novo."));
+      }
     }
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={mudarAberto}>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>{t("Concluir atendimento")}</DialogTitle>
@@ -103,7 +119,7 @@ export function ConcluirComMotivo({ conversationId, etiquetas, open, onOpenChang
           />
         </div>
         <DialogFooter>
-          <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
+          <Button type="button" variant="ghost" onClick={() => mudarAberto(false)}>
             {t("Cancelar")}
           </Button>
           <Button type="button" disabled={!motivo || enviando} onClick={() => void concluir()}>

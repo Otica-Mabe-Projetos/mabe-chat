@@ -9,6 +9,15 @@ Validação de cada item: `npx vitest run components/mabe`, `npx eslint` e `npm 
 instalado nesta máquina). **Nada foi testado no navegador**: falta um ambiente local com Supabase. A conferência na
 tela fica para depois do deploy (lista no fim da seção 1).
 
+## 0. No ar (01/10, ~04h Belém)
+
+- **Instalado:** a nossa imagem 1.69.0 (oficial v1.69.0 + 28 commits nossos, sem conflito). O atualizador fez backup antes (`/backups/20261001-035700-antes-de-v1.69.0`), baseline, SQL da trava por loja, checagem rápida e saúde `healthy`.
+- **Conferido:** o domínio responde 307 → /login; `/api/v1/health` responde 200; os textos novos estão no build que roda.
+- **Atenção:** a produção já estava na 1.69.0 desde 30/09 17:45 (alguém clicou em "atualizar" no app). Por isso a 1.68.0 não foi instalada, porque seria downgrade.
+- **Bug do atualizador corrigido** (`mabe-chat` main `ce1a6f2`): depois de uma atualização pedida pelo app, o loop segurava a trava para sempre e qualquer atualização manual recusava. O atualizador do servidor foi reconstruído com a correção.
+- **Build quebrava** (passou no typecheck e nos testes): `espera.ts` tinha hook do React e era importado no servidor. O hook foi para `useAgora.ts` com "use client". Desde então, o build completo do Next roda localmente antes de cada imagem.
+- **WhatsApp:** 3 números WORKING (BASE 8618, BASE 9834, L05). O **BASE 0481 está FAILED desde 02:49 UTC**, antes da instalação, e precisa reconectar pelo QR em Conexões.
+
 ## 1. O que foi implementado
 
 | # | O que muda para o atendente/supervisor | Commit | Testes |

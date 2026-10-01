@@ -1,6 +1,6 @@
 # Mabe Chat — trabalho da noite de 01/10/2026
 
-Branch `personalizacoes`, em cima da nossa 1.68.0. Tudo commitado só localmente: **sem push e sem deploy**.
+Branch `personalizacoes`, em cima da nossa 1.68.0. Push, imagem e instalação feitos ao fim da noite por Claude (ver seção 1).
 Código novo só em arquivos nossos (`components/mabe/**`, `lib/mabe/**`, `app/app/settings/*-mabe`/`lojas`).
 Onde precisou tocar em arquivo oficial, a edição é mínima e tem o comentário "Personalização Ótica Mabe".
 Nenhum SQL novo e nenhuma mudança no servidor, no WAHA ou no ERP.
@@ -22,9 +22,9 @@ tela fica para depois do deploy (lista no fim da seção 1).
 | N7 | Menos carga no servidor. As configurações da empresa são lidas 1 vez por página, em vez de 2 a 5. A aba do navegador escondida para de consultar a cada 45 s (antes passava a noite consultando). Abrir uma conversa mantém os filtros de loja e de atendente. | `952cb1d5f` | 63 testes ok (inclui testes oficiais de tempo real) |
 | N8 | Tela de Lojas mais segura. Ligar ou desligar a trava pede confirmação com resumo. O quadro "Situação" mostra pessoas sem loja, números sem loja e lojas sem ninguém marcado. O texto agora diz que Contatos, Funis, Agenda e Tarefas continuam visíveis para todos. "Salvo, mas…" aparece como aviso, não como erro. Se a leitura da equipe falhar, nada é gravado (antes podia zerar os responsáveis). | `43dae060c` | 44 testes ok |
 | Revisão | Quem tem "todas as lojas" deixou de esconder "loja sem atendente", porque essa pessoa não entra no rodízio. Antes, uma loja sem ninguém aparecia como "Tudo marcado". | `684be4cfd` | 8 testes de lojas ok |
-| N9 | **Parcial, NÃO commitado.** Papéis em português na Equipe ("Papel", "Gerente", "Somente leitura"…), confirmação ao entrar em admin ou sair dele, e cadastro direto já com loja. | — | Só `lib/mabe/papeis.test.ts` ok; typecheck/lint não terminaram |
+| N9 | **Parcial, fora da versão** (guardado no branch local `wip-equipe-n9`). Papéis em português na Equipe ("Papel", "Gerente", "Somente leitura"…), confirmação ao entrar em admin ou sair dele, e cadastro direto já com loja. | — | Só `lib/mabe/papeis.test.ts` ok; typecheck/lint não terminaram |
 
-**N9: como terminar.** Os arquivos estão no worktree. Modificados: `app/app/settings/lojas/_client.tsx`,
+**N9: como terminar.** Os arquivos estão no commit do branch local `wip-equipe-n9` (não entra na imagem). Modificados: `app/app/settings/lojas/_client.tsx`,
 `app/app/team/_components/TeamMembersClient.tsx` (oficial, edição marcada) e `components/team/CadastroDireto.tsx`.
 Novos: `components/mabe/equipe/ConfirmarPapel.tsx`, `lib/mabe/papeis.ts` e `lib/mabe/papeis.test.ts`.
 Rodar `npm run typecheck`, `npx vitest run components/mabe lib/mabe tests/unit` e `npx eslint` nesses arquivos.

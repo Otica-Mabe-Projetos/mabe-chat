@@ -133,8 +133,10 @@ Ordem sugerida: os itens 1 a 3 (servidor) **antes do próximo deploy**.
     - fazer o de-para das lojas do ERP para L01..L15;
     - dizer onde ficam as OS (talvez no sistema-de-Mabe).
 
-    O ERP hoje só tem Manaus, com um buraco de jan a jul/2026. Próximo passo nosso: escrever
-    `docs/mabe/ERP-CLIENTE-NO-MABE-CHAT.md` com o rascunho do SQL para o André (sem credenciais).
+    CORREÇÃO: o ERP tem TODAS as unidades (205 mil clientes, legado desde 2021), com buraco de jan a jul/2026
+    na rede inteira. Retrato por loja e rascunho do SQL para o André no repositório PRIVADO do OSA
+    (`teste-QuickLead/DOCUMENTACAO/ERP-UNIDADES-E-CLIENTE-NO-MABE-CHAT-2026-10-01.md`): números de
+    faturamento não entram neste fork público.
 12. **Agenda em dois lugares** (Paulo). Os TMKs agendam no RD CRM, mas é a agenda do Mabe Chat que marca "cliente".
     Proposta:
     - piloto numa loja usando só a agenda do Mabe Chat (botão "Agendar exame" em destaque);

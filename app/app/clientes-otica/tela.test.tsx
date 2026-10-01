@@ -58,7 +58,7 @@ describe("tela Clientes da ótica", () => {
     expect(screen.getByText("Por unidade")).toBeInTheDocument();
     expect(screen.getAllByText("Pará").length).toBeGreaterThan(0);
     expect(screen.getByText("atualizado às 10:00", { exact: false })).toBeInTheDocument();
-    expect(screen.getByText("L01 · Loja Teste")).toBeInTheDocument();
+    expect(screen.getAllByText("L01 · Loja Teste").length).toBeGreaterThan(0);
     expect(screen.getByText("Sem loja")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Fulana de Teste" })).toHaveAttribute("href", "/app/clientes-otica/00000000191");
     expect(screen.getByText("000.000.001-91")).toBeInTheDocument();

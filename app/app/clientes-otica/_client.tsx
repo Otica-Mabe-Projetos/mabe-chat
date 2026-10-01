@@ -475,8 +475,7 @@ function TabelaDeClientes(props: {
                 <th scope="col" className="px-4 py-2.5 font-medium">{t("Cliente")}</th>
                 <th scope="col" className="px-3 py-2.5 font-medium">{t("CPF")}</th>
                 <th scope="col" className="px-3 py-2.5 font-medium">{t("Telefone")}</th>
-                <th scope="col" className="px-3 py-2.5 font-medium">{t("Loja")}</th>
-                <th scope="col" className="px-3 py-2.5 font-medium">{t("Cidade")}</th>
+                <th scope="col" className="px-3 py-2.5 font-medium">{t("Loja / unidade")}</th>
                 <th scope="col" className="px-3 py-2.5 text-right font-medium">{t("Compras")}</th>
                 <th scope="col" className="px-3 py-2.5 text-right font-medium">{t("Total gasto")}</th>
                 <th scope="col" className="px-4 py-2.5 font-medium">{t("Última compra")}</th>
@@ -558,16 +557,18 @@ function LinhaDoCliente({ c, lojas, hoje, abrir }: { c: ClienteResumo; lojas: Re
       </td>
       <td className="px-3 py-2.5 whitespace-nowrap tabular-nums text-text-muted">{formatarCpf(c.cpf)}</td>
       <td className="px-3 py-2.5 whitespace-nowrap tabular-nums text-text-muted">{telefone ? formatarTelefone(telefone) : "—"}</td>
-      <td className="px-3 py-2.5 whitespace-nowrap">
+      <td className="max-w-56 px-3 py-2.5">
         {c.loja ? (
-          <span title={lojas[c.loja] ?? c.loja} className="font-mono text-xs text-text">
-            {c.loja}
+          <span className="block truncate text-text" title={lojas[c.loja] ?? c.loja}>
+            {lojas[c.loja] ?? c.loja}
           </span>
         ) : (
-          <span className="text-text-muted">—</span>
+          <span className="block text-text-muted">{t("Sem loja")}</span>
         )}
+        <span className="block truncate text-xs text-text-muted">
+          {[unidadeDaLoja(c.loja)?.rotulo, [c.cidade, c.estado].filter(Boolean).join("/")].filter(Boolean).join(" · ") || "—"}
+        </span>
       </td>
-      <td className="max-w-40 truncate px-3 py-2.5 text-text-muted">{[c.cidade, c.estado].filter(Boolean).join("/") || "—"}</td>
       <td className="px-3 py-2.5 text-right tabular-nums">{inteiro(c.compras)}</td>
       <td className="px-3 py-2.5 text-right whitespace-nowrap tabular-nums">{moeda(c.total_gasto)}</td>
       <td className="px-4 py-2.5 whitespace-nowrap">

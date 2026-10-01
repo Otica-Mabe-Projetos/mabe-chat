@@ -21,8 +21,15 @@ import type { ConversationsFilters, useConversationsRealtime } from "@/hooks/inb
 import { MagnifyingGlass } from "@/lib/ui/icons";
 import { cn } from "@/lib/utils";
 import { AlternarModo } from "./AlternarModo";
+import { formatarEspera, maisAntigoEsperando, tomDaEspera, useAgora, type TomDaEspera } from "./espera";
 
 export type Aba = "novos" | "meus" | "outros";
+
+const COR_DO_TEXTO: Record<TomDaEspera, string> = {
+  ok: "text-text-muted",
+  atencao: "text-warning-fg",
+  atrasado: "text-error-fg",
+};
 
 interface Props {
   aba: Aba;
@@ -58,6 +65,18 @@ export function ListaDeAtendimentos(props: Props) {
     const id = setTimeout(() => onBusca(texto), 250);
     return () => clearTimeout(id);
   }, [texto, busca, onBusca]);
+  // Quem está esperando: só nas páginas já carregadas (sem consulta nova). Em
+  // supervisão (?atendente=) as conversas não são "minhas", então nada aparece.
+  const olhaEspera = !props.atendente && (props.aba === "meus" || props.aba === "novos");
+  const agora = useAgora(60_000, olhaEspera);
+  const esperando = olhaEspera
+    ? maisAntigoEsperando(props.listQuery.data?.pages.flatMap((p) => p.data) ?? [], agora)
+    : null;
+  const tom = esperando ? tomDaEspera(esperando.minutos) : "ok";
+  const atrasoDosNovos =
+    props.aba === "novos" && esperando && tom !== "ok"
+      ? t("Mais antigo esperando há {tempo}").replace("{tempo}", formatarEspera(esperando.minutos))
+      : null;
   const abas: Array<{ id: Aba; rotulo: string; n: number | null }> = [
     { id: "novos", rotulo: t("Novos"), n: props.contagem.novos },
     { id: "meus", rotulo: t("Meus"), n: props.contagem.meus },
@@ -100,10 +119,18 @@ export function ListaDeAtendimentos(props: Props) {
                   <span
                     className={cn(
                       "min-w-5 rounded-full px-1.5 text-center text-xs font-semibold tabular-nums",
-                      a.id === "novos" ? "bg-accent text-accent-foreground" : "bg-surface-elevated text-text-muted",
+                      a.id !== "novos"
+                        ? "bg-surface-elevated text-text-muted"
+                        : atrasoDosNovos
+                          ? tom === "atrasado"
+                            ? "bg-error-bg text-error-fg"
+                            : "bg-warning-bg text-warning-fg"
+                          : "bg-accent text-accent-foreground",
                     )}
+                    title={a.id === "novos" ? (atrasoDosNovos ?? undefined) : undefined}
                   >
                     {a.n > 999 ? "999+" : a.n}
+                    {a.id === "novos" && atrasoDosNovos ? <span className="sr-only"> · {atrasoDosNovos}</span> : null}
                   </span>
                 )}
               </button>
@@ -120,6 +147,20 @@ export function ListaDeAtendimentos(props: Props) {
               {t("Ver todas")}
             </button>
           </div>
+        ) : null}
+        {props.aba === "meus" && esperando ? (
+          <button
+            type="button"
+            onClick={() => props.onSelect(esperando.id)}
+            className={cn(
+              "mt-2 w-full px-3 py-1.5 text-left text-sm hover:bg-surface-elevated",
+              COR_DO_TEXTO[tom],
+            )}
+          >
+            {t("{n} cliente(s) esperando sua resposta · mais antigo há {tempo}")
+              .replace("{n}", String(esperando.total))
+              .replace("{tempo}", formatarEspera(esperando.minutos))}
+          </button>
         ) : null}
         <SeletorDeLoja numero={props.numero} onNumero={props.onNumero} />
         <div className="flex items-center gap-2 px-3 pb-3 pt-2.5">

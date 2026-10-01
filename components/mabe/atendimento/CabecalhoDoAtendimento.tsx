@@ -32,7 +32,7 @@ import {
   IdentificationCard,
 } from "@/lib/ui/icons";
 import { cn } from "@/lib/utils";
-import { esperaDesde, useAgora } from "./espera";
+import { esperaDesde, tomDaEspera, useAgora } from "./espera";
 
 const ENCERRADOS = new Set(["closed", "archived", "resolved"]);
 
@@ -84,7 +84,7 @@ export function CabecalhoDoAtendimento({
       ? {
           texto: `${t("Esperando há")} ${formatarDecorrido(esperaMs)}`,
           icone: Clock,
-          tom: esperaMs >= 15 * 60_000 ? "erro" : esperaMs >= 5 * 60_000 ? "aviso" : "neutro",
+          tom: ({ ok: "neutro", atencao: "aviso", atrasado: "erro" } as const)[tomDaEspera(esperaMs / 60_000)],
           titulo: t("Tempo desde a última mensagem do cliente sem resposta"),
         }
       : encerrada

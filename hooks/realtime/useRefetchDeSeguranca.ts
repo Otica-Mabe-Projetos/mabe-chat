@@ -126,7 +126,11 @@ export function useRefetchDeSeguranca<T>({
 
   useEffect(() => {
     if (!enabled) return;
-    const timer = setInterval(() => void verificar(), intervaloMs);
+    // Personalização Ótica Mabe: não consulta com a aba escondida; o listener de visibilitychange abaixo ressincroniza ao voltar.
+    const timer = setInterval(() => {
+      if (document.visibilityState !== "visible") return;
+      void verificar();
+    }, intervaloMs);
 
     // AO VOLTAR PARA A ABA, imediatamente: é o momento em que o usuário mais
     // acredita no que vê, e é justamente quando a tela pode estar mais velha —

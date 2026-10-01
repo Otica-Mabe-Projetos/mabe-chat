@@ -17,6 +17,7 @@ import { listSelectableChannels } from "@/lib/channels/selectable";
 import { nomearNumero, numeroDaOrganizacao } from "@/lib/mabe/canais-das-lojas";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
+import { lerLojas } from "./ler";
 import {
   acessoSchema,
   codigoSchema,
@@ -249,8 +250,7 @@ export async function lerResumoDeLojasDaEquipe(): Promise<
 > {
   const ctx = await exigirAdmin();
   if (typeof ctx === "string") return { ok: false, erro: ctx };
-  const { data } = await createAdminClient().from("organizations").select("settings").eq("id", ctx.orgId).maybeSingle();
-  const cfg = lojasDeSettings(data?.settings ?? null);
+  const cfg = await lerLojas(ctx.orgId);
   const porPessoa: Record<string, string> = {};
   for (const [uid, a] of Object.entries(cfg.acesso)) {
     porPessoa[uid] = a.todas ? "Todas as lojas" : a.lojas.join(", ");
@@ -265,8 +265,7 @@ export async function lerLojasParaConexoes(): Promise<
 > {
   const ctx = await exigirAdmin();
   if (typeof ctx === "string") return { ok: false, erro: ctx };
-  const { data } = await createAdminClient().from("organizations").select("settings").eq("id", ctx.orgId).maybeSingle();
-  const cfg = lojasDeSettings(data?.settings ?? null);
+  const cfg = await lerLojas(ctx.orgId);
   return {
     ok: true,
     lojas: cfg.lojas.map((l) => ({ codigo: l.codigo, rotulo: rotuloDaLoja(l), ativa: l.ativa })),
@@ -283,8 +282,7 @@ export async function lerAcessoDoMembro(
   if (!uid.success) return { ok: false, erro: "Pessoa inválida." };
   const ctx = await exigirAdmin();
   if (typeof ctx === "string") return { ok: false, erro: ctx };
-  const { data } = await createAdminClient().from("organizations").select("settings").eq("id", ctx.orgId).maybeSingle();
-  const cfg = lojasDeSettings(data?.settings ?? null);
+  const cfg = await lerLojas(ctx.orgId);
   const a = cfg.acesso[uid.data];
   return {
     ok: true,

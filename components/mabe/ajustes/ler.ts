@@ -1,7 +1,7 @@
 import "server-only";
 import { cache } from "react";
 
-import { createAdminClient } from "@/lib/supabase/admin";
+import { lerSettingsDaOrg } from "@/lib/mabe/settings-da-org";
 import { ajustesMabeDeSettings, PADRAO, type AjustesMabe } from "./ajustes";
 
 /**
@@ -11,10 +11,5 @@ import { ajustesMabeDeSettings, PADRAO, type AjustesMabe } from "./ajustes";
  */
 export const lerAjustesMabe = cache(async (orgId: string | null | undefined): Promise<AjustesMabe> => {
   if (!orgId) return PADRAO;
-  const { data } = await createAdminClient()
-    .from("organizations")
-    .select("settings")
-    .eq("id", orgId)
-    .maybeSingle();
-  return ajustesMabeDeSettings(data?.settings ?? null);
+  return ajustesMabeDeSettings(await lerSettingsDaOrg(orgId));
 });

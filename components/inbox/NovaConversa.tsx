@@ -76,10 +76,10 @@ export function useAbrirConversa() {
       await Promise.all(
         ["contacts", "leads", "board"].map((k) => qc.invalidateQueries({ queryKey: [k] })),
       );
-      // Mantém aba e loja da mesa (?aba=, ?numero=) ao abrir a conversa nova.
+      // Mantém aba e filtros da mesa (?aba=, ?numero=, ?loja=, ?atendente=) ao abrir a conversa nova.
       const atual = new URLSearchParams(window.location.pathname === "/app/inbox" ? window.location.search : "");
       const params = new URLSearchParams();
-      for (const k of ["aba", "numero", "filter"]) {
+      for (const k of ["aba", "numero", "loja", "atendente", "filter"]) {
         const v = atual.get(k);
         if (v) params.set(k, v);
       }

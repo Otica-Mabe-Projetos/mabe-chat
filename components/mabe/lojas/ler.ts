@@ -1,7 +1,7 @@
 import "server-only";
 import { cache } from "react";
 
-import { createAdminClient } from "@/lib/supabase/admin";
+import { lerSettingsDaOrg } from "@/lib/mabe/settings-da-org";
 import { CONFIG_PADRAO, lojasDeSettings, type ConfigLojas } from "./lojas";
 
 /**
@@ -11,10 +11,5 @@ import { CONFIG_PADRAO, lojasDeSettings, type ConfigLojas } from "./lojas";
  */
 export const lerLojas = cache(async (orgId: string | null | undefined): Promise<ConfigLojas> => {
   if (!orgId) return CONFIG_PADRAO;
-  const { data } = await createAdminClient()
-    .from("organizations")
-    .select("settings")
-    .eq("id", orgId)
-    .maybeSingle();
-  return lojasDeSettings(data?.settings ?? null);
+  return lojasDeSettings(await lerSettingsDaOrg(orgId));
 });

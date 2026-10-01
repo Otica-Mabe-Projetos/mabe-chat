@@ -72,7 +72,8 @@ export function horaBr(valor: string | null | undefined, fuso = "America/Sao_Pau
   if (!valor) return "—";
   const d = new Date(valor);
   if (Number.isNaN(d.getTime())) return "—";
-  return new Intl.DateTimeFormat("pt-BR", { timeZone: fuso, hour: "2-digit", minute: "2-digit", hour12: false }).format(d);
+  // HH:MM é igual em qualquer idioma; en-GB só porque dá 24 h com zero à esquerda.
+  return new Intl.DateTimeFormat("en-GB", { timeZone: fuso, hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).format(d);
 }
 
 function partes(dia: string): [number, number, number] {

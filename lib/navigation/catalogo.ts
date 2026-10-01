@@ -166,6 +166,15 @@ export const NAV_CATALOG = [
     sidebar: true,
     minRole: "manager",
   },
+  // Personalização Ótica Mabe: a base de clientes do ERP das lojas (app/app/clientes-otica).
+  {
+    href: "/app/clientes-otica",
+    label: "Clientes da ótica",
+    description: "Quem já é cliente nas lojas: compras, OS em andamento, receitas e aniversariantes.",
+    icon: "UserCircle",
+    group: "atendimento",
+    sidebar: true,
+  },
   {
     href: "/app/radar",
     label: "Radar",

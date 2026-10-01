@@ -184,11 +184,12 @@ describe("medição da folga (pergunta de aceite da issue #1341)", () => {
    * vínculo. É o número que o issue publica (15 itens: atendimento 4, CRM 3,
    * IA 3, canais 2, análise 3), medido aqui pelo módulo que alimenta o menu.
    */
-  // Personalização Ótica Mabe: +1 item, "Lojas" (supervisão por loja, app/app/lojas).
-  it("hoje: 16 itens no menu lateral (15 oficiais + Lojas da Mabe)", () => {
-    expect(itensNoMenuLateral(INTERFACE_COMPLETA)).toBe(16);
+  // Personalização Ótica Mabe: +2 itens, "Lojas" (supervisão por loja, app/app/lojas)
+  // e "Clientes da ótica" (base do ERP, app/app/clientes-otica).
+  it("hoje: 17 itens no menu lateral (15 oficiais + Lojas e Clientes da ótica da Mabe)", () => {
+    expect(itensNoMenuLateral(INTERFACE_COMPLETA)).toBe(17);
     // `undefined` é o caminho de quem não tem escolha nenhuma gravada
-    expect(itensNoMenuLateral(undefined)).toBe(16);
+    expect(itensNoMenuLateral(undefined)).toBe(17);
   });
 
   /**
@@ -196,8 +197,8 @@ describe("medição da folga (pergunta de aceite da issue #1341)", () => {
    * A escolha da empresa é interseção, então o menu só ENCOLHE — a mudança não
    * tem como empurrar o instrumento de tela para o vermelho.
    */
-  it("configuração COMPLETA (ninguém escolheu): 16 itens — igual a hoje (com Lojas da Mabe)", () => {
-    expect(itensNoMenuLateral(combinarInterfaces(completa, completa))).toBe(16);
+  it("configuração COMPLETA (ninguém escolheu): 17 itens — igual a hoje (com Lojas e Clientes da ótica da Mabe)", () => {
+    expect(itensNoMenuLateral(combinarInterfaces(completa, completa))).toBe(17);
   });
 
   it("configuração SIMPLIFICADA (empresa escolhe o preset): 6 itens, folga 9", () => {

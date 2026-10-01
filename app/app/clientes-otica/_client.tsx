@@ -11,10 +11,23 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState, useTransition } from "react";
 
+import { CarregandoBase } from "@/components/mabe/visual/CarregandoBase";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { useT } from "@/hooks/i18n/useT";
-import { aniversarioNoMes, dataBr, formatarCpf, formatarTelefone, haQuanto, horaBr, inteiro, moeda, soDigitos } from "@/lib/mabe/erp/formato";
+import {
+  aniversarioNoMes,
+  dataBr,
+  formatarCpf,
+  formatarTelefone,
+  haQuanto,
+  horaBr,
+  inteiro,
+  moeda,
+  soDigitos,
+  telefoneComDdd,
+  telefoneParaConversa,
+} from "@/lib/mabe/erp/formato";
 import { ROTULO_DA_ORDEM, ROTULO_DO_FILTRO } from "@/lib/mabe/erp/rotulos";
 import {
   FILTROS,
@@ -36,6 +49,7 @@ import {
 } from "@/lib/mabe/erp/tipos";
 import { CaretLeft, CaretRight, CircleNotch, MagnifyingGlass, Warning } from "@/lib/ui/icons";
 import { cn } from "@/lib/utils";
+import { Conversar } from "./[cpf]/_acoes";
 
 export type Estado = { q: string; unidade: Unidade | null; loja: string | null; filtro: Filtro; ordem: Ordem; pagina: number };
 
@@ -62,6 +76,8 @@ export function TelaDeClientes(props: {
   lojas: Record<string, string>;
   hoje: string;
   fuso: string;
+  /** Números de WhatsApp por onde a pessoa pode mandar mensagem (restrição por loja); `null` = todos. */
+  permitidos: string[] | null;
 }) {
   const t = useT();
   const router = useRouter();
@@ -122,9 +138,10 @@ export function TelaDeClientes(props: {
             </button>
           </p>
         ) : null}
+        {carregando ? <CarregandoBase texto="Buscando clientes" /> : null}
         {busca.ok ? (
           <div className={cn("transition-opacity", carregando && "pointer-events-none opacity-60")} aria-busy={carregando}>
-            <TabelaDeClientes resultado={busca.valor} estado={estado} lojas={props.lojas} hoje={props.hoje} ir={ir} />
+            <TabelaDeClientes resultado={busca.valor} estado={estado} lojas={props.lojas} hoje={props.hoje} ir={ir} permitidos={props.permitidos} />
           </div>
         ) : (
           <AvisoDeErro mensagem={t(mensagemDoMotivo(busca.motivo))} />
@@ -137,13 +154,20 @@ export function TelaDeClientes(props: {
 function AvisoDeErro({ mensagem }: { mensagem: string }) {
   const t = useT();
   const router = useRouter();
+  const [tentando, iniciar] = useTransition();
   return (
     <Card role="alert" className="flex items-start gap-3 border-warning-fg/30 bg-warning-bg p-4">
       <Warning size={20} className="mt-0.5 shrink-0 text-warning-fg" aria-hidden />
       <div className="min-w-0 flex-1">
         <p className="text-sm text-text">{mensagem}</p>
-        <button type="button" onClick={() => router.refresh()} className="mt-2 text-sm font-medium text-accent underline-offset-2 hover:underline">
-          {t("Tentar de novo")}
+        <button
+          type="button"
+          disabled={tentando}
+          onClick={() => iniciar(() => router.refresh())}
+          className="mt-2 inline-flex items-center gap-1.5 text-sm font-medium text-accent underline-offset-2 hover:underline disabled:no-underline disabled:opacity-70"
+        >
+          {tentando ? <CircleNotch size={14} className="animate-spin" aria-hidden /> : null}
+          {tentando ? t("Carregando…") : t("Tentar de novo")}
         </button>
       </div>
     </Card>
@@ -436,6 +460,7 @@ function TabelaDeClientes(props: {
   lojas: Record<string, string>;
   hoje: string;
   ir: (url: string) => void;
+  permitidos: string[] | null;
 }) {
   const t = useT();
   const router = useRouter();
@@ -483,7 +508,7 @@ function TabelaDeClientes(props: {
             </thead>
             <tbody className="divide-y divide-border">
               {resultado.itens.map((c) => (
-                <LinhaDoCliente key={c.cpf} c={c} lojas={props.lojas} hoje={props.hoje} abrir={(href) => router.push(href)} />
+                <LinhaDoCliente key={c.cpf} c={c} lojas={props.lojas} hoje={props.hoje} permitidos={props.permitidos} abrir={(href) => router.push(href)} />
               ))}
             </tbody>
           </table>
@@ -531,10 +556,21 @@ function BotaoDePagina(props: { desligado: boolean; onClick: () => void; rotulo:
   );
 }
 
-function LinhaDoCliente({ c, lojas, hoje, abrir }: { c: ClienteResumo; lojas: Record<string, string>; hoje: string; abrir: (href: string) => void }) {
+function LinhaDoCliente(props: {
+  c: ClienteResumo;
+  lojas: Record<string, string>;
+  hoje: string;
+  permitidos: string[] | null;
+  abrir: (href: string) => void;
+}) {
+  const { c, lojas, hoje, abrir } = props;
   const t = useT();
   const href = `${BASE}/${soDigitos(c.cpf)}`;
-  const telefone = c.telefone1 || c.telefone2 || c.telefone3;
+  // O primeiro número que dá para discar (sem DDD, completa com o da loja); senão, o que houver.
+  const tels = [c.telefone1, c.telefone2, c.telefone3].filter((x): x is string => !!x?.trim());
+  const telefone = tels.find((x) => telefoneParaConversa(x, c.loja)) ?? tels[0];
+  const para = telefone ? telefoneParaConversa(telefone, c.loja) : null;
+  const presumido = telefone ? telefoneComDdd(telefone, c.loja)?.presumido : false;
   const aniversario = aniversarioNoMes(c.data_nascimento, hoje);
   return (
     <tr className="cursor-pointer transition-colors hover:bg-surface-elevated" onClick={() => abrir(href)}>
@@ -556,7 +592,15 @@ function LinhaDoCliente({ c, lojas, hoje, abrir }: { c: ClienteResumo; lojas: Re
         ) : null}
       </td>
       <td className="px-3 py-2.5 whitespace-nowrap tabular-nums text-text-muted">{formatarCpf(c.cpf)}</td>
-      <td className="px-3 py-2.5 whitespace-nowrap tabular-nums text-text-muted">{telefone ? formatarTelefone(telefone) : "—"}</td>
+      <td className="px-3 py-1.5 whitespace-nowrap">
+        <div className="flex items-center gap-2">
+          <span className="tabular-nums text-text-muted" title={presumido ? t("O cadastro não tinha DDD; usamos o DDD da loja do cliente.") : undefined}>
+            {telefone ? formatarTelefone(telefone, c.loja) : "—"}
+            {presumido ? <span className="ml-0.5 text-[11px]">*</span> : null}
+          </span>
+          {para ? <Conversar telefone={para} nome={c.nome || undefined} permitidos={props.permitidos} compacto /> : null}
+        </div>
+      </td>
       <td className="max-w-56 px-3 py-2.5">
         {c.loja ? (
           <span className="block truncate text-text" title={lojas[c.loja] ?? c.loja}>

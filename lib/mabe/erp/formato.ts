@@ -22,18 +22,44 @@ export function telefoneNacional(tel: string | null | undefined): string {
   return d.startsWith("55") && (d.length === 12 || d.length === 13) ? d.slice(2) : d;
 }
 
-/** (92) 99999-9999 / (92) 9999-9999; formato desconhecido volta como veio. */
-export function formatarTelefone(tel: string | null | undefined): string {
-  const d = telefoneNacional(tel);
+/**
+ * DDD de cada loja. Muito telefone do sistema antigo foi salvo sem DDD ("98573-5522"):
+ * o cliente quase sempre é da região da loja onde comprou, então completamos com o DDD dela.
+ */
+export const DDD_DA_LOJA: Record<string, string> = {
+  L01: "91", L02: "91", L03: "91", L04: "91", L05: "91", L06: "91", L07: "91", L08: "91",
+  L09: "94", L10: "92", L11: "98", L12: "91", L13: "92", L14: "85", L15: "92",
+};
+
+/**
+ * Telefone com DDD (só dígitos nacionais). Sem DDD e com loja conhecida, completa com o DDD
+ * da loja (`presumido`); celular de 8 dígitos ganha o 9. `null` se não dá para discar.
+ */
+export function telefoneComDdd(
+  tel: string | null | undefined,
+  loja?: string | null,
+): { nacional: string; presumido: boolean } | null {
+  const d = telefoneNacional(tel).replace(/^0+/, "");
+  if (d.length === 10 || d.length === 11) return { nacional: d, presumido: false };
+  const ddd = loja ? DDD_DA_LOJA[loja] : undefined;
+  if (!ddd) return null;
+  if (d.length === 9 && d.startsWith("9")) return { nacional: ddd + d, presumido: true };
+  if (d.length === 8) return { nacional: ddd + (/^[6-9]/.test(d) ? `9${d}` : d), presumido: true };
+  return null;
+}
+
+/** (92) 99999-9999 / (92) 9999-9999; sem DDD usa o da loja; formato desconhecido volta como veio. */
+export function formatarTelefone(tel: string | null | undefined, loja?: string | null): string {
+  const d = telefoneComDdd(tel, loja)?.nacional ?? telefoneNacional(tel);
   if (d.length === 11) return `(${d.slice(0, 2)}) ${d.slice(2, 7)}-${d.slice(7)}`;
   if (d.length === 10) return `(${d.slice(0, 2)}) ${d.slice(2, 6)}-${d.slice(6)}`;
   return (tel ?? "").trim() || "—";
 }
 
-/** Telefone pronto para abrir conversa (+55DDDNUMERO), ou `null` se não parece celular/fixo BR. */
-export function telefoneParaConversa(tel: string | null | undefined): string | null {
-  const d = telefoneNacional(tel);
-  return d.length === 10 || d.length === 11 ? `+55${d}` : null;
+/** Telefone pronto para abrir conversa (+55DDDNUMERO), ou `null` se não dá para discar. */
+export function telefoneParaConversa(tel: string | null | undefined, loja?: string | null): string | null {
+  const t = telefoneComDdd(tel, loja);
+  return t ? `+55${t.nacional}` : null;
 }
 
 const MOEDA = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });

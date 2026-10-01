@@ -1,9 +1,11 @@
 // Clientes da ótica (personalização Ótica Mabe): esqueleto enquanto o ERP responde.
+import { CarregandoBase } from "@/components/mabe/visual/CarregandoBase";
 import { Skeleton } from "@/components/ui/skeleton";
 
 export default function Carregando() {
   return (
     <div className="flex h-full flex-col gap-6 overflow-hidden p-4 sm:p-6" aria-busy="true" aria-label="Carregando clientes">
+      <CarregandoBase texto="Carregando clientes da ótica" />
       <div className="flex flex-col gap-2">
         <Skeleton className="h-8 w-56" />
         <Skeleton className="h-4 w-full max-w-lg" />

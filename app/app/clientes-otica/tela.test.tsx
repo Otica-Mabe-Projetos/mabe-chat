@@ -3,6 +3,10 @@ import { render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 vi.mock("next/navigation", () => ({ useRouter: () => ({ replace: vi.fn(), push: vi.fn(), refresh: vi.fn() }) }));
+// O botão de mensagem depende de sessão e canais; aqui só importa para qual número ele aponta.
+vi.mock("./[cpf]/_acoes", () => ({
+  Conversar: ({ telefone }: { telefone: string }) => <button type="button" aria-label={`Enviar mensagem ${telefone}`} />,
+}));
 
 import type { ClienteResumo, Painel } from "@/lib/mabe/erp/tipos";
 import { TelaDeClientes, type Estado } from "./_client";
@@ -48,6 +52,7 @@ const pintar = (p: Partial<Parameters<typeof TelaDeClientes>[0]>) =>
       lojas={lojas}
       hoje="2026-10-01"
       fuso="America/Belem"
+      permitidos={null}
       {...p}
     />,
   );
@@ -63,6 +68,7 @@ describe("tela Clientes da ótica", () => {
     expect(screen.getByRole("link", { name: "Fulana de Teste" })).toHaveAttribute("href", "/app/clientes-otica/00000000191");
     expect(screen.getByText("000.000.001-91")).toBeInTheDocument();
     expect(screen.getByText("(91) 99999-0000")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Enviar mensagem +5591999990000" })).toBeInTheDocument();
     expect(screen.getByText("Pronta p/ retirada")).toBeInTheDocument();
     expect(screen.getByText("Aniversário no mês")).toBeInTheDocument();
     expect(screen.getByText("há 3 meses")).toBeInTheDocument();
@@ -78,5 +84,12 @@ describe("tela Clientes da ótica", () => {
     pintar({ painel: { ok: false, motivo: "indisponivel" }, busca: { ok: false, motivo: "indisponivel" } });
     expect(screen.getAllByRole("alert")).toHaveLength(1);
     expect(screen.getByText(/Não consegui falar com a base da ótica/)).toBeInTheDocument();
+  });
+
+  it("telefone sem DDD ganha o DDD da loja e o botão de mensagem", () => {
+    const semDdd = { ...cliente, telefone1: "98573-5522", loja: "L10" };
+    pintar({ busca: { ok: true, valor: { total: 1, limite: 50, offset: 0, itens: [semDdd] } } });
+    expect(screen.getByText("(92) 98573-5522", { exact: false })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Enviar mensagem +5592985735522" })).toBeInTheDocument();
   });
 });

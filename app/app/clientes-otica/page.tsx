@@ -9,7 +9,7 @@
 import { redirect } from "next/navigation";
 
 import { lerLojas } from "@/components/mabe/lojas/ler";
-import { rotuloDaLoja } from "@/components/mabe/lojas/lojas";
+import { numerosVisiveis, rotuloDaLoja } from "@/components/mabe/lojas/lojas";
 import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
 import { traduzir } from "@/lib/i18n/dicionario";
 import { buscarClientes, painelDeClientes } from "@/lib/mabe/erp/clientes";
@@ -60,7 +60,15 @@ export default async function ClientesDaOticaPage({
           {t("Quem já é cliente nas lojas: compras, OS em andamento e receitas. Busque pelo nome, CPF ou telefone.")}
         </p>
       </header>
-      <TelaDeClientes painel={painel} busca={busca} estado={estado} lojas={lojas} hoje={hojeNoFuso(fuso)} fuso={fuso} />
+      <TelaDeClientes
+        painel={painel}
+        busca={busca}
+        estado={estado}
+        lojas={lojas}
+        hoje={hojeNoFuso(fuso)}
+        fuso={fuso}
+        permitidos={numerosVisiveis(cfg, user.id, activeOrg.role)}
+      />
     </div>
   );
 }

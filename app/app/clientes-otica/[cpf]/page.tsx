@@ -27,6 +27,7 @@ import {
   idade,
   inteiro,
   moeda,
+  telefoneComDdd,
   telefoneParaConversa,
 } from "@/lib/mabe/erp/formato";
 import { CONTATO_CRM, FORMA_DE_PAGAMENTO, POS_VENDA, RENEGOCIACAO, STATUS_DA_OS, humanizar, rotulo, statusDaOs } from "@/lib/mabe/erp/rotulos";
@@ -159,7 +160,15 @@ function FichaCompleta({ ficha, ctx, permitidos }: { ficha: Ficha; ctx: Ctx; per
   const res = ficha.resumo;
   const nome = cad?.nome || res?.nome || t("Sem nome");
   const cpf = cad?.cpf || res?.cpf || "";
-  const telefones = [...new Set([cad?.telefone1, cad?.telefone2, cad?.telefone3, res?.telefone1, res?.telefone2, res?.telefone3].filter((x): x is string => !!x?.trim()))];
+  // Um número por linha, mesmo que o ERP o tenha salvo com e sem DDD em campos diferentes.
+  const vistos = new Set<string>();
+  const telefones = [cad?.telefone1, cad?.telefone2, cad?.telefone3, res?.telefone1, res?.telefone2, res?.telefone3].filter((x): x is string => {
+    if (!x?.trim()) return false;
+    const chave = telefoneParaConversa(x, res?.loja) ?? x.trim();
+    if (vistos.has(chave)) return false;
+    vistos.add(chave);
+    return true;
+  });
   const nascimento = cad?.data_nascimento || res?.data_nascimento || null;
   const anos = idade(nascimento, hoje);
   const endereco = [cad?.endereco, cad?.bairro || res?.bairro, [cad?.cidade || res?.cidade, cad?.estado || res?.estado].filter(Boolean).join("/"), cad?.cep ? `CEP ${cad.cep}` : null]
@@ -188,10 +197,16 @@ function FichaCompleta({ ficha, ctx, permitidos }: { ficha: Ficha; ctx: Ctx; per
         {telefones.length ? (
           <ul className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:gap-x-6">
             {telefones.map((tel) => {
-              const para = telefoneParaConversa(tel);
+              const para = telefoneParaConversa(tel, res?.loja);
+              const presumido = telefoneComDdd(tel, res?.loja)?.presumido;
               return (
                 <li key={tel} className="flex items-center gap-2">
-                  <span className="text-sm tabular-nums text-text">{formatarTelefone(tel)}</span>
+                  <span className="text-sm tabular-nums text-text">{formatarTelefone(tel, res?.loja)}</span>
+                  {presumido ? (
+                    <span className="text-xs text-text-muted" title={t("O cadastro não tinha DDD; usamos o DDD da loja do cliente.")}>
+                      {t("DDD da loja")}
+                    </span>
+                  ) : null}
                   {para ? <Conversar telefone={para} nome={nome} permitidos={permitidos} /> : null}
                 </li>
               );

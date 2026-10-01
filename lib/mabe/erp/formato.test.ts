@@ -11,6 +11,7 @@ import {
   horaBr,
   idade,
   moeda,
+  telefoneComDdd,
   telefoneParaConversa,
 } from "./formato";
 import { humanizar, rotulo, CONTATO_CRM, FORMA_DE_PAGAMENTO, statusDaOs } from "./rotulos";
@@ -132,5 +133,21 @@ describe("validação das entradas", () => {
   it("todo motivo de erro tem frase", () => {
     expect(mensagemDoMotivo("sem_conexao")).toMatch(/base de clientes/);
     expect(mensagemDoMotivo("lento")).toMatch(/demorou/);
+  });
+});
+
+describe("telefone sem DDD", () => {
+  it("completa com o DDD da loja e marca como presumido", () => {
+    expect(telefoneComDdd("98573-5522", "L10")).toEqual({ nacional: "92985735522", presumido: true });
+    expect(telefoneComDdd("8573-5522", "L14")).toEqual({ nacional: "85985735522", presumido: true });
+    expect(telefoneComDdd("3222-1100", "L01")).toEqual({ nacional: "9132221100", presumido: true });
+    expect(telefoneComDdd("(91) 98888-7777", "L10")).toEqual({ nacional: "91988887777", presumido: false });
+    expect(telefoneComDdd("98573-5522", null)).toBeNull();
+    expect(telefoneComDdd("123", "L10")).toBeNull();
+  });
+  it("formata e abre conversa com o número completo", () => {
+    expect(formatarTelefone("98573-5522", "L11")).toBe("(98) 98573-5522");
+    expect(telefoneParaConversa("98573-5522", "L09")).toBe("+5594985735522");
+    expect(telefoneParaConversa("98573-5522")).toBeNull();
   });
 });

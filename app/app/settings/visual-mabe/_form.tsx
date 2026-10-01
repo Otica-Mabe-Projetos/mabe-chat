@@ -129,12 +129,12 @@ export function FormularioVisualMabe({ gravado }: { gravado: AjustesMabe }) {
             checked={ajustes.visual}
             onChange={(v) => mudar("visual", v)}
           />
-          <div className="flex items-center justify-between gap-4 py-3">
+          <div className="flex flex-wrap items-center justify-between gap-4 py-3">
             <div className="space-y-0.5">
               <p className="text-sm font-medium">{t("Tom")}</p>
               <p className="text-sm text-muted-foreground">{t("Qual cor da paleta da Mabe pinta o sistema.")}</p>
             </div>
-            <div role="radiogroup" aria-label={t("Tom")} className="flex gap-2">
+            <div role="radiogroup" aria-label={t("Tom")} className="flex flex-wrap gap-2">
               {(Object.keys(TONS) as Tom[]).map((tom) => (
                 <button
                   key={tom}
@@ -168,14 +168,14 @@ export function FormularioVisualMabe({ gravado }: { gravado: AjustesMabe }) {
             checked={ajustes.mesa}
             onChange={(v) => mudar("mesa", v)}
           />
-          <div className="flex items-center justify-between gap-4 py-3">
+          <div className="flex flex-wrap items-center justify-between gap-4 py-3">
             <div className="space-y-0.5">
               <p className="text-sm font-medium">{t("Quem abre o Inbox na mesa")}</p>
               <p className="text-sm text-muted-foreground">
                 {t("Admins e gerentes sempre podem trocar pelo botão \"Modo completo\".")}
               </p>
             </div>
-            <div role="radiogroup" aria-label={t("Quem abre o Inbox na mesa")} className="flex gap-2">
+            <div role="radiogroup" aria-label={t("Quem abre o Inbox na mesa")} className="flex flex-wrap gap-2">
               {(["todos", "atendentes"] as const).map((quem) => (
                 <button
                   key={quem}

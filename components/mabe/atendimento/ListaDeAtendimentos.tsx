@@ -108,7 +108,7 @@ export function ListaDeAtendimentos(props: Props) {
                 aria-selected={ativa}
                 onClick={() => props.onAba(a.id)}
                 className={cn(
-                  "flex min-h-11 shrink-0 items-center gap-1.5 border-b-2 px-3 text-sm transition-colors",
+                  "-mb-px flex min-h-11 shrink-0 items-center gap-1.5 border-b-2 px-3 text-sm transition-colors",
                   ativa
                     ? "border-accent font-semibold text-text"
                     : "border-transparent text-text-muted hover:text-text",

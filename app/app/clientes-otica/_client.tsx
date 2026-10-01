@@ -2,7 +2,7 @@
 /**
  * Clientes da ótica — a parte interativa da lista (personalização Ótica Mabe).
  *
- * Todo o estado mora na URL (`?q=&loja=&filtro=&ordem=&pagina=`): F5 e link
+ * Todo o estado mora na URL (`?q=&unidade=&loja=&filtro=&ordem=&pagina=`): F5 e link
  * compartilhado abrem a mesma lista. A busca troca a URL com `router.replace`
  * dentro de uma transição, então a lista atual fica na tela (esmaecida) até a
  * nova chegar do servidor.
@@ -21,7 +21,10 @@ import {
   ORDENS,
   POR_PAGINA,
   SEM_LOJA,
+  UNIDADES,
   mensagemDoMotivo,
+  unidadeDaLoja,
+  unidadePorChave,
   type ClienteResumo,
   type Filtro,
   type LojaDoPainel,
@@ -29,11 +32,12 @@ import {
   type Painel,
   type ResultadoDaBusca,
   type ResultadoErp,
+  type Unidade,
 } from "@/lib/mabe/erp/tipos";
 import { CaretLeft, CaretRight, CircleNotch, MagnifyingGlass, Warning } from "@/lib/ui/icons";
 import { cn } from "@/lib/utils";
 
-export type Estado = { q: string; loja: string | null; filtro: Filtro; ordem: Ordem; pagina: number };
+export type Estado = { q: string; unidade: Unidade | null; loja: string | null; filtro: Filtro; ordem: Ordem; pagina: number };
 
 const BASE = "/app/clientes-otica";
 
@@ -42,6 +46,7 @@ function urlCom(estado: Estado, troca: Partial<Estado>): string {
   const e = { ...estado, pagina: 1, ...troca };
   const p = new URLSearchParams();
   if (e.q.trim()) p.set("q", e.q.trim());
+  if (e.unidade) p.set("unidade", e.unidade);
   if (e.loja) p.set("loja", e.loja);
   if (e.filtro !== "todos") p.set("filtro", e.filtro);
   if (e.ordem !== "recentes") p.set("ordem", e.ordem);
@@ -77,7 +82,18 @@ export function TelaDeClientes(props: {
         <AvisoDeErro mensagem={t(mensagemDoMotivo(painel.motivo))} />
       )}
       {painel.ok && painel.valor.lojas.length > 0 ? (
-        <GradeDeLojas lojas={painel.valor.lojas} rotulos={props.lojas} estado={estado} ir={ir} />
+        <>
+          <GradeDeUnidades lojas={painel.valor.lojas} estado={estado} ir={ir} />
+          {estado.unidade ? (
+            <GradeDeLojas
+              lojas={painel.valor.lojas.filter((l) => unidadeDaLoja(l.loja)?.chave === estado.unidade)}
+              rotulos={props.lojas}
+              estado={estado}
+              ir={ir}
+              titulo={`${t("Lojas de")} ${unidadePorChave(estado.unidade)?.rotulo ?? ""}`}
+            />
+          ) : null}
+        </>
       ) : null}
 
       <section className="flex flex-col gap-3" aria-labelledby="lista-de-clientes">
@@ -86,11 +102,23 @@ export function TelaDeClientes(props: {
         </h2>
         <BarraDeBusca estado={estado} ir={ir} carregando={carregando} />
         <ChipsDeFiltro estado={estado} painel={painel.ok ? painel.valor : null} ir={ir} />
-        {estado.loja ? (
-          <p className="text-sm text-text-muted">
-            {t("Loja")}: <span className="font-medium text-text">{estado.loja === SEM_LOJA ? t("Sem loja") : (props.lojas[estado.loja] ?? estado.loja)}</span>{" "}
-            <button type="button" onClick={() => ir(urlCom(estado, { loja: null }))} className="ml-1 text-accent underline-offset-2 hover:underline">
-              {t("ver todas as lojas")}
+        {estado.unidade || estado.loja ? (
+          <p className="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-sm text-text-muted">
+            <span>{t("Mostrando")}:</span>
+            {estado.unidade ? <span className="font-medium text-text">{unidadePorChave(estado.unidade)?.rotulo}</span> : null}
+            {estado.loja ? (
+              <>
+                {estado.unidade ? <span aria-hidden>›</span> : null}
+                <span className="font-medium text-text">{estado.loja === SEM_LOJA ? t("Sem loja") : (props.lojas[estado.loja] ?? estado.loja)}</span>
+                {estado.unidade ? (
+                  <button type="button" onClick={() => ir(urlCom(estado, { loja: null }))} className="ml-1 text-accent underline-offset-2 hover:underline">
+                    {t("toda a unidade")}
+                  </button>
+                ) : null}
+              </>
+            ) : null}
+            <button type="button" onClick={() => ir(urlCom(estado, { unidade: null, loja: null }))} className="ml-1 text-accent underline-offset-2 hover:underline">
+              {t("toda a rede")}
             </button>
           </p>
         ) : null}
@@ -157,13 +185,90 @@ function ResumoGeral({ painel, hoje, fuso }: { painel: Painel; hoje: string; fus
   );
 }
 
-function GradeDeLojas(props: { lojas: LojaDoPainel[]; rotulos: Record<string, string>; estado: Estado; ir: (url: string) => void }) {
+/** Soma do painel para um conjunto de lojas (uma unidade). */
+function resumoDe(lojas: LojaDoPainel[]) {
+  const total = soma(lojas, "total_gasto");
+  // nº de compras de cada loja = total ÷ ticket médio (o painel não traz a contagem crua)
+  const compras = lojas.reduce((s, l) => s + (l.ticket_medio ? (l.total_gasto ?? 0) / l.ticket_medio : 0), 0);
+  return {
+    clientes: soma(lojas, "clientes"),
+    compradores: soma(lojas, "compradores"),
+    ativos_12m: soma(lojas, "ativos_12m"),
+    os_abertas: soma(lojas, "os_abertas"),
+    os_prontas: soma(lojas, "os_prontas"),
+    aniversariantes_mes: soma(lojas, "aniversariantes_mes"),
+    total_gasto: total,
+    ticket_medio: compras > 0 ? total / compras : 0,
+  };
+}
+
+function GradeDeUnidades(props: { lojas: LojaDoPainel[]; estado: Estado; ir: (url: string) => void }) {
+  const t = useT();
+  const cartoes = [
+    ...UNIDADES.map((u) => ({
+      chave: u.chave as string,
+      rotulo: u.rotulo,
+      detalhe: `${u.lojas.length} ${u.lojas.length === 1 ? t("loja") : t("lojas")}`,
+      lojas: props.lojas.filter((l) => unidadeDaLoja(l.loja)?.chave === u.chave),
+      ativa: props.estado.unidade === u.chave,
+      ir: () => props.ir(urlCom(props.estado, { unidade: props.estado.unidade === u.chave ? null : u.chave, loja: null })),
+    })),
+    {
+      chave: SEM_LOJA,
+      rotulo: t("Sem loja"),
+      detalhe: t("loja antiga não identificada ou sem compra"),
+      lojas: props.lojas.filter((l) => !unidadeDaLoja(l.loja)),
+      ativa: props.estado.loja === SEM_LOJA,
+      ir: () => props.ir(urlCom(props.estado, { unidade: null, loja: props.estado.loja === SEM_LOJA ? null : SEM_LOJA })),
+    },
+  ].filter((c) => c.lojas.length > 0);
+
+  return (
+    <section aria-label={t("Clientes por unidade")} className="flex flex-col gap-2">
+      <h2 className="text-sm font-semibold text-text">{t("Por unidade")}</h2>
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-5">
+        {cartoes.map((c) => {
+          const r = resumoDe(c.lojas);
+          return (
+            <button
+              key={c.chave}
+              type="button"
+              aria-pressed={c.ativa}
+              onClick={c.ir}
+              className={cn(
+                "rounded-lg border bg-surface p-4 text-left transition-colors hover:border-accent focus-visible:ring-2 focus-visible:ring-accent focus-visible:outline-hidden",
+                c.ativa ? "border-accent bg-accent-soft" : "border-border",
+              )}
+            >
+              <div className="flex items-baseline justify-between gap-2">
+                <p className="min-w-0 truncate text-base font-semibold text-text">{c.rotulo}</p>
+                <p className="shrink-0 text-xl font-semibold tabular-nums text-text">{inteiro(r.clientes)}</p>
+              </div>
+              <p className="mb-3 truncate text-xs text-text-muted">{c.detalhe}</p>
+              <dl className="grid grid-cols-3 gap-1.5 text-xs">
+                <Dado rotulo={t("Ativos 12m")} valor={inteiro(r.ativos_12m)} />
+                <Dado rotulo={t("OS abertas")} valor={inteiro(r.os_abertas)} tom={r.os_abertas ? "text-info-fg" : undefined} />
+                <Dado rotulo={t("Prontas")} valor={inteiro(r.os_prontas)} tom={r.os_prontas ? "text-success-fg" : undefined} />
+                <Dado rotulo={t("Aniversariantes")} valor={inteiro(r.aniversariantes_mes)} tom={r.aniversariantes_mes ? "text-accent" : undefined} />
+                <Dado rotulo={t("Compradores")} valor={inteiro(r.compradores)} />
+                <Dado rotulo={t("Ticket médio")} valor={moeda(r.ticket_medio)} />
+                <Dado rotulo={t("Total gasto")} valor={moeda(r.total_gasto)} largo />
+              </dl>
+            </button>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
+function GradeDeLojas(props: { lojas: LojaDoPainel[]; rotulos: Record<string, string>; estado: Estado; ir: (url: string) => void; titulo: string }) {
   const t = useT();
   // L01..L15 em ordem, "Sem loja" no fim.
   const lojas = [...props.lojas].sort((a, b) => (a.loja ?? "~").localeCompare(b.loja ?? "~"));
   return (
     <section aria-label={t("Clientes por loja")} className="flex flex-col gap-2">
-      <h2 className="text-sm font-semibold text-text">{t("Por loja")}</h2>
+      <h2 className="text-sm font-semibold text-text">{props.titulo}</h2>
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
         {lojas.map((l) => {
           const codigo = l.loja ?? SEM_LOJA;
@@ -174,7 +279,7 @@ function GradeDeLojas(props: { lojas: LojaDoPainel[]; rotulos: Record<string, st
               key={codigo}
               type="button"
               aria-pressed={ativa}
-              onClick={() => props.ir(urlCom(props.estado, { loja: ativa ? null : codigo }))}
+              onClick={() => props.ir(urlCom(props.estado, { loja: ativa ? null : codigo, unidade: unidadeDaLoja(l.loja)?.chave ?? props.estado.unidade }))}
               className={cn(
                 "rounded-lg border bg-surface p-3 text-left transition-colors hover:border-accent focus-visible:ring-2 focus-visible:ring-accent focus-visible:outline-hidden",
                 ativa ? "border-accent bg-accent-soft" : "border-border",
@@ -275,13 +380,17 @@ function BarraDeBusca({ estado, ir, carregando }: { estado: Estado; ir: (url: st
   );
 }
 
-/** Quantos clientes cada filtro traz, pelo painel (da loja escolhida, se houver). */
-function contagens(painel: Painel | null, loja: string | null): Partial<Record<Filtro, number>> {
+/** Quantos clientes cada filtro traz, pelo painel (da loja ou unidade escolhida, se houver). */
+function contagens(painel: Painel | null, loja: string | null, unidade: Unidade | null): Partial<Record<Filtro, number>> {
   if (!painel) return {};
-  const l = loja ? painel.lojas.filter((x) => (x.loja ?? SEM_LOJA) === loja) : painel.lojas;
+  const l = loja
+    ? painel.lojas.filter((x) => (x.loja ?? SEM_LOJA) === loja)
+    : unidade
+      ? painel.lojas.filter((x) => unidadeDaLoja(x.loja)?.chave === unidade)
+      : painel.lojas;
   const clientes = soma(l, "clientes");
   return {
-    todos: loja ? clientes : painel.total,
+    todos: loja || unidade ? clientes : painel.total,
     os_abertas: soma(l, "os_abertas"),
     prontas: soma(l, "os_prontas"),
     aniversariantes: soma(l, "aniversariantes_mes"),
@@ -294,7 +403,7 @@ function contagens(painel: Painel | null, loja: string | null): Partial<Record<F
 
 function ChipsDeFiltro({ estado, painel, ir }: { estado: Estado; painel: Painel | null; ir: (url: string) => void }) {
   const t = useT();
-  const n = contagens(painel, estado.loja);
+  const n = contagens(painel, estado.loja, estado.unidade);
   return (
     <div className="flex flex-wrap gap-2" role="group" aria-label={t("Filtros")}>
       {FILTROS.map((f) => {
@@ -331,7 +440,7 @@ function TabelaDeClientes(props: {
   const t = useT();
   const router = useRouter();
   const { resultado, estado } = props;
-  const filtrando = !!estado.q || !!estado.loja || estado.filtro !== "todos";
+  const filtrando = !!estado.q || !!estado.loja || !!estado.unidade || estado.filtro !== "todos";
 
   if (resultado.itens.length === 0) {
     return (

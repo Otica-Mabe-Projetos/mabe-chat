@@ -63,7 +63,8 @@ export async function buscarClientes(entrada: BuscaEntrada): Promise<ResultadoEr
   const r = await consultarErp<ResultadoDaBusca>(
     membro.orgId,
     "select public.mabe_cli_buscar($1,$2,$3,$4,$5,$6) as r",
-    [b.termo, b.loja, b.filtro, b.ordem, b.limite, b.offset],
+    // Uma loja, ou a unidade inteira como lista "L10,L13,L15" (o ERP aceita os dois).
+    [b.termo, b.loja ?? b.lojas?.join(",") ?? null, b.filtro, b.ordem, b.limite, b.offset],
   );
   if (!r.ok) return r;
   return { ok: true, valor: { total: r.valor?.total ?? 0, limite: b.limite, offset: b.offset, itens: r.valor?.itens ?? [] } };

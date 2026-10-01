@@ -7,7 +7,7 @@ vi.mock("next/navigation", () => ({ useRouter: () => ({ replace: vi.fn(), push: 
 import type { ClienteResumo, Painel } from "@/lib/mabe/erp/tipos";
 import { TelaDeClientes, type Estado } from "./_client";
 
-const estado: Estado = { q: "", loja: null, filtro: "todos", ordem: "recentes", pagina: 1 };
+const estado: Estado = { q: "", unidade: null, loja: null, filtro: "todos", ordem: "recentes", pagina: 1 };
 const lojas = { L01: "L01 · Loja Teste" };
 const painel: Painel = {
   atualizado_em: "2026-10-01T13:00:00Z",
@@ -53,8 +53,10 @@ const pintar = (p: Partial<Parameters<typeof TelaDeClientes>[0]>) =>
   );
 
 describe("tela Clientes da ótica", () => {
-  it("resumo, grade de lojas e linha do cliente com selos", () => {
-    pintar({});
+  it("resumo, grade de unidades e de lojas e linha do cliente com selos", () => {
+    pintar({ estado: { ...estado, unidade: "para" } });
+    expect(screen.getByText("Por unidade")).toBeInTheDocument();
+    expect(screen.getAllByText("Pará").length).toBeGreaterThan(0);
     expect(screen.getByText("atualizado às 10:00", { exact: false })).toBeInTheDocument();
     expect(screen.getByText("L01 · Loja Teste")).toBeInTheDocument();
     expect(screen.getByText("Sem loja")).toBeInTheDocument();

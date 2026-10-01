@@ -14,7 +14,7 @@ import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
 import { traduzir } from "@/lib/i18n/dicionario";
 import { buscarClientes, painelDeClientes } from "@/lib/mabe/erp/clientes";
 import { hojeNoFuso } from "@/lib/mabe/erp/formato";
-import { POR_PAGINA, lerEstadoDaUrl } from "@/lib/mabe/erp/tipos";
+import { POR_PAGINA, lerEstadoDaUrl, unidadePorChave } from "@/lib/mabe/erp/tipos";
 import { fusoUtilizavel } from "@/lib/tempo/fusos";
 import { TelaDeClientes } from "./_client";
 
@@ -36,6 +36,7 @@ export default async function ClientesDaOticaPage({
     buscarClientes({
       termo: estado.q,
       loja: estado.loja,
+      lojas: estado.loja ? null : [...(unidadePorChave(estado.unidade)?.lojas ?? [])],
       filtro: estado.filtro,
       ordem: estado.ordem,
       limite: POR_PAGINA,

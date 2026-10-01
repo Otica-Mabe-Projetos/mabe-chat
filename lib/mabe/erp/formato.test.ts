@@ -93,7 +93,7 @@ describe("validação das entradas", () => {
   });
 
   it("busca: padrões, loja e limites", () => {
-    expect(buscaSchema.parse({})).toEqual({ termo: null, loja: null, filtro: "todos", ordem: "recentes", limite: 50, offset: 0 });
+    expect(buscaSchema.parse({})).toEqual({ termo: null, loja: null, lojas: null, filtro: "todos", ordem: "recentes", limite: 50, offset: 0 });
     expect(buscaSchema.parse({ loja: "l05" }).loja).toBe("L05");
     expect(buscaSchema.parse({ loja: "sem_loja" }).loja).toBe("sem_loja");
     expect(buscaSchema.safeParse({ loja: "X1" }).success).toBe(false);
@@ -113,6 +113,7 @@ describe("validação das entradas", () => {
   it("estado da URL: valor estranho cai no padrão", () => {
     expect(lerEstadoDaUrl({ q: "ana", loja: "l02", filtro: "prontas", ordem: "gasto", pagina: "3" })).toEqual({
       q: "ana",
+      unidade: "para",
       loja: "L02",
       filtro: "prontas",
       ordem: "gasto",
@@ -120,6 +121,7 @@ describe("validação das entradas", () => {
     });
     expect(lerEstadoDaUrl({ loja: "zzz", filtro: "x", ordem: "y", pagina: "-2" })).toEqual({
       q: "",
+      unidade: null,
       loja: null,
       filtro: "todos",
       ordem: "recentes",

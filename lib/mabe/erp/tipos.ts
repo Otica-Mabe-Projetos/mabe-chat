@@ -28,6 +28,25 @@ export type Ordem = (typeof ORDENS)[number];
 /** Valor de `loja` que pede os clientes sem loja. */
 export const SEM_LOJA = "sem_loja";
 
+/** Unidades da rede e as lojas de cada uma (códigos de Configurações › Lojas). */
+export const UNIDADES = [
+  { chave: "manaus", rotulo: "Manaus", lojas: ["L10", "L13", "L15"] },
+  { chave: "para", rotulo: "Pará", lojas: ["L01", "L02", "L03", "L04", "L05", "L06", "L07", "L08", "L09", "L12"] },
+  { chave: "fortaleza", rotulo: "Fortaleza", lojas: ["L14"] },
+  { chave: "saoluis", rotulo: "São Luís", lojas: ["L11"] },
+] as const;
+export type Unidade = (typeof UNIDADES)[number]["chave"];
+const CHAVES_DE_UNIDADE = UNIDADES.map((u) => u.chave) as [Unidade, ...Unidade[]];
+
+export function unidadePorChave(chave: string | null | undefined) {
+  return UNIDADES.find((u) => u.chave === chave) ?? null;
+}
+
+/** Unidade de uma loja (`L15` → Manaus); null para sem loja ou loja fora das unidades. */
+export function unidadeDaLoja(loja: string | null | undefined) {
+  return UNIDADES.find((u) => (u.lojas as readonly string[]).includes(loja ?? "")) ?? null;
+}
+
 /** Itens por página da lista. */
 export const POR_PAGINA = 50;
 
@@ -54,6 +73,8 @@ const lojaSchema = z
 export const buscaSchema = z.object({
   termo: z.string().max(100).nullish().transform(normalizarTermo),
   loja: lojaSchema.nullish().transform((v) => v ?? null),
+  /** Várias lojas (uma unidade inteira); vale só quando `loja` não veio. */
+  lojas: z.array(lojaSchema).max(20).nullish().transform((v) => (v && v.length ? v : null)),
   filtro: z.enum(FILTROS).default("todos"),
   ordem: z.enum(ORDENS).default("recentes"),
   limite: z.number().int().min(1).max(200).default(POR_PAGINA),
@@ -78,11 +99,12 @@ export const cpfSchema = z
   .refine((d) => d.length >= 3 && d.length <= 14, "CPF inválido.");
 
 /**
- * Estado da lista na URL (`?q=&loja=&filtro=&ordem=&pagina=`). Valor estranho na
+ * Estado da lista na URL (`?q=&unidade=&loja=&filtro=&ordem=&pagina=`). Valor estranho na
  * URL cai no padrão em vez de virar erro: link velho ou editado à mão ainda abre.
  */
 export function lerEstadoDaUrl(p: Record<string, string | string[] | undefined>): {
   q: string;
+  unidade: Unidade | null;
   loja: string | null;
   filtro: Filtro;
   ordem: Ordem;
@@ -93,12 +115,16 @@ export function lerEstadoDaUrl(p: Record<string, string | string[] | undefined>)
     return (Array.isArray(v) ? v[0] : v) ?? "";
   };
   const loja = lojaSchema.safeParse(um("loja"));
+  const unidade = z.enum(CHAVES_DE_UNIDADE).safeParse(um("unidade"));
   const filtro = z.enum(FILTROS).safeParse(um("filtro"));
   const ordem = z.enum(ORDENS).safeParse(um("ordem"));
   const pagina = Number.parseInt(um("pagina"), 10);
+  const lojaOk = loja.success ? loja.data : null;
   return {
     q: um("q").slice(0, 100),
-    loja: loja.success ? loja.data : null,
+    // Loja escolhida manda na unidade (link antigo só com ?loja= abre na unidade certa).
+    unidade: unidadeDaLoja(lojaOk)?.chave ?? (unidade.success ? unidade.data : null),
+    loja: lojaOk,
     filtro: filtro.success ? filtro.data : "todos",
     ordem: ordem.success ? ordem.data : "recentes",
     pagina: Number.isFinite(pagina) && pagina >= 1 ? Math.min(pagina, 20_000) : 1,

@@ -44,6 +44,7 @@ import { buscaValeConsulta } from "@/lib/inbox/termo-de-busca";
 import type { Message } from "@/lib/types/messaging";
 import { ArrowRight, ChatCircle, CheckCircle, Play } from "@/lib/ui/icons";
 import { cn } from "@/lib/utils";
+import { AjudaDosAtalhos } from "./AjudaDosAtalhos";
 import { CabecalhoDoAtendimento } from "./CabecalhoDoAtendimento";
 import { ConcluirComMotivo } from "./ConcluirComMotivo";
 import { numeroPermitido, useMabe } from "@/components/mabe/ajustes/ProvedorMabe";
@@ -51,6 +52,7 @@ import { ListaDeAtendimentos, type Aba } from "./ListaDeAtendimentos";
 import { colunasDoCelular, useAgora } from "./espera";
 import { FaixaDoAnuncio } from "./OrigemDoAnuncio";
 import { PainelDoCliente } from "./PainelDoCliente";
+import { useAtalhosDaMesa } from "./useAtalhosDaMesa";
 
 const ABAS: Aba[] = ["novos", "meus", "outros"];
 const ENCERRADOS = new Set(["closed", "archived", "resolved"]);
@@ -103,6 +105,9 @@ export function Atendimento({ initialSelectedId = null }: { initialSelectedId?: 
   const [transferindo, setTransferindo] = useState(false);
   const [concluindo, setConcluindo] = useState(false);
   const [painelAberto, setPainelAberto] = useState(false);
+  const [ajudaAberta, setAjudaAberta] = useState(false);
+  // Envolve o compositor: o atalho "r" foca o campo de resposta daqui de dentro.
+  const caixaDaResposta = useRef<HTMLDivElement>(null);
 
   // Voltar/avançar do navegador e links com ?id= (funil, contatos, notificação).
   const ultimoIdNaUrl = useRef(idNaUrl);
@@ -227,6 +232,28 @@ export function Atendimento({ initialSelectedId = null }: { initialSelectedId?: 
       ? t("Contato anonimizado — não é possível enviar mensagens.")
       : null;
 
+  const idsDaAba = useMemo(
+    () => listaDaAba.data?.pages.flatMap((p) => p.data.map((c) => c.id)) ?? [],
+    [listaDaAba.data],
+  );
+  const podeAgir = !!conversa && !encerrada && !somenteLeitura;
+  useAtalhosDaMesa({
+    ativo: !transferindo && !concluindo && !painelAberto && !ajudaAberta,
+    ids: idsDaAba,
+    selecionado: selectedId,
+    selecionar: handleSelect,
+    podeIniciar: podeAgir && semDono && !claim.isPending,
+    iniciar,
+    podeConcluir: podeAgir && eMinha,
+    concluir: () => setConcluindo(true),
+    // Mesmas regras dos botões: dono, ou sem dono, ou gerente vendo colega.
+    podeTransferir: podeAgir && (eMinha || semDono || gerente),
+    transferir: () => setTransferindo(true),
+    focarResposta: () => caixaDaResposta.current?.querySelector("textarea")?.focus(),
+    mudarAba: trocarAba,
+    abrirAjuda: () => setAjudaAberta(true),
+  });
+
   const colunas = colunasDoCelular(Boolean(selectedId));
 
   return (
@@ -347,14 +374,19 @@ export function Atendimento({ initialSelectedId = null }: { initialSelectedId?: 
                       onAbrirConversa={handleSelect}
                     />
                   )}
-                  <ComposerComJanela
-                    key={conversa.id}
-                    conversa={conversa}
-                    provider={provider}
-                    bloqueio={bloqueio}
-                    respondendo={respondendo}
-                    onCancelarResposta={() => setRespondendo(null)}
-                  />
+                  <div ref={caixaDaResposta}>
+                    <ComposerComJanela
+                      key={conversa.id}
+                      conversa={conversa}
+                      provider={provider}
+                      bloqueio={bloqueio}
+                      respondendo={respondendo}
+                      onCancelarResposta={() => setRespondendo(null)}
+                    />
+                    <p className="hidden px-4 pb-2 text-xs text-text-muted md:block">
+                      {t("Digite / para respostas rápidas · ? para atalhos")}
+                    </p>
+                  </div>
                 </>
               ) : (
                 <Aviso
@@ -429,6 +461,7 @@ export function Atendimento({ initialSelectedId = null }: { initialSelectedId?: 
           <PainelDoCliente conversation={conversa} />
         </div>
       </div>
+      <AjudaDosAtalhos open={ajudaAberta} onOpenChange={setAjudaAberta} />
     </OpenConversationProvider>
   );
 }

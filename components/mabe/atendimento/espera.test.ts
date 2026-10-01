@@ -1,7 +1,8 @@
 import { act, renderHook } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { colunasDoCelular, esperaDesde, formatarEspera, maisAntigoEsperando, tomDaEspera, useAgora } from "./espera";
+import { colunasDoCelular, esperaDesde, formatarEspera, maisAntigoEsperando, tomDaEspera } from "./espera";
+import { useAgora } from "./useAgora";
 
 describe("esperaDesde", () => {
   it("última mensagem nossa: não há espera, mesmo com awaiting_since preenchido", () => {

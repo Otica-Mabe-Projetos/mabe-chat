@@ -32,7 +32,8 @@ import {
   IdentificationCard,
 } from "@/lib/ui/icons";
 import { cn } from "@/lib/utils";
-import { esperaDesde, tomDaEspera, useAgora } from "./espera";
+import { esperaDesde, tomDaEspera } from "./espera";
+import { useAgora } from "./useAgora";
 
 const ENCERRADOS = new Set(["closed", "archived", "resolved"]);
 

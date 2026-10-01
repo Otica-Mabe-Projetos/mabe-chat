@@ -21,7 +21,8 @@ import type { ConversationsFilters, useConversationsRealtime } from "@/hooks/inb
 import { MagnifyingGlass } from "@/lib/ui/icons";
 import { cn } from "@/lib/utils";
 import { AlternarModo } from "./AlternarModo";
-import { formatarEspera, maisAntigoEsperando, tomDaEspera, useAgora, type TomDaEspera } from "./espera";
+import { formatarEspera, maisAntigoEsperando, tomDaEspera, type TomDaEspera } from "./espera";
+import { useAgora } from "./useAgora";
 
 export type Aba = "novos" | "meus" | "outros";
 

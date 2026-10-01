@@ -999,6 +999,10 @@ export const AUDIT_ACTIONS = [
   "company_people.updated",
   "contacts.person_linked",
   "imports.companies_people",
+
+  // Personalização Ótica Mabe: abrir a ficha de um cliente da base do ERP
+  // (LGPD — quem viu qual CPF e quando). lib/mabe/erp/clientes.ts.
+  "mabe.cliente_erp.ficha",
 ] as const;
 
 /** Um código de auditoria. Derivado de `AUDIT_ACTIONS` — não redigite a lista. */

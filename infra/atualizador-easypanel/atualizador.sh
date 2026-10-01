@@ -384,7 +384,17 @@ saudavel() {  # até ~3 min: /api/v1/health = healthy ou degraded
 
 # ------------------------------------------------------------ atualização ---
 
+# Solta a trava ao fim de toda atualização: o `exec 9>` abre o descritor no shell que
+# chamou, e no `loop` esse shell vive para sempre — sem soltar, depois do primeiro pedido
+# pelo app nenhuma atualização manual roda ("já existe uma atualização em andamento").
 atualizar() {  # atualizar <vX.Y.Z> [run_id]
+  local rc=0
+  _atualizar "$@" || rc=$?
+  exec 9>&-
+  return "$rc"
+}
+
+_atualizar() {
   local alvo="$1" de base
   RUN_ID="${2:-}"
   de="$(versao_instalada)"
